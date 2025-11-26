@@ -14,21 +14,22 @@ const rooms = [
 
 export default function Room() {
   return (
-    <section className="w-full bg-white pt-20 pb-12 sm:pt-24">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Top description */}
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm sm:text-base leading-relaxed text-slate-700">
-            Al-Riffa is a platform that connects Umrah pilgrims with a wide
-            range of hotels in Makkah and Madinah. We offer a variety of
-            accommodations to suit every budget and preference, from
-            budget-friendly options to luxurious suites. Our platform provides
-            detailed information about each hotel, including amenities, reviews,
-            and photos, to help you make an informed decision. With Al-Riffa,
-            you can easily find and book the perfect hotel for your Umrah
-            journey.
-          </p>
-        </div>
+    <section className="w-full bg-white pt-12 pb-12 sm:pt-16">
+  <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="lg:text-lg sm:text-base leading-relaxed text-slate-700 mb-10">
+        Al-Riffa is a platform that connects Umrah pilgrims with a wide
+        range of hotels in Makkah and Madinah. We offer a variety of
+        accommodations to suit every budget and preference, from
+        budget-friendly options to luxurious suites. Our platform
+        provides detailed information about each hotel, including
+        amenities, reviews, and photos, to help you make an informed
+        decision. With Al-Riffa, you can easily find and book the
+        perfect hotel for your Umrah journey.
+      </p>
+    </div>
+
 
         {/* Room cards */}
         <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">

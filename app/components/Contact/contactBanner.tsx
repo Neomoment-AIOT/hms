@@ -2,7 +2,7 @@
 
 import { useEffect, useState as useReactState } from "react";
 
-export default function ContactLabel() {
+export default function ContactBanner() {
   const [headerHeight, setHeaderHeight] = useReactState(0);
 
   useEffect(() => {

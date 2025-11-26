@@ -37,7 +37,7 @@ export default function Header() {
           <a href="/about" className="hover:underline">About Us</a>
           <a href="/hotel" className="hover:underline">Hotels</a>
           <a href="/contact" className="hover:underline">Contact Us</a>
-          <a href="/" className="hover:underline">Blog</a>
+          <a href="/blog" className="hover:underline">Blogs</a>
 
           {/* Language Dropdown */}
           <div className="relative">
@@ -103,7 +103,7 @@ export default function Header() {
           <a href="/about" className="hover:text-teal-600" onClick={toggleMenu}>About Us</a>
           <a href="/hotel" className="hover:text-teal-600" onClick={toggleMenu}>Hotels</a>
           <a href="/contact" className="hover:text-teal-600" onClick={toggleMenu}>Contact Us</a>
-          <a href="/" className="hover:text-teal-600" onClick={toggleMenu}>Blog</a>
+          <a href="/blog" className="hover:text-teal-600" onClick={toggleMenu}>Blog</a>
 
           {/* Language Dropdown Mobile */}
           <div className="relative">
