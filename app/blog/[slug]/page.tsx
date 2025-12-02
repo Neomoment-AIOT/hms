@@ -140,7 +140,6 @@ export default function BlogPostPage({ params }: any) {
     },
   ];
 
-  // ⭐ FIND THE CORRECT BLOG BY SLUG
   const blog = blogs.find((b) => b.slug === slug);
 
   if (!blog) {
@@ -151,7 +150,6 @@ export default function BlogPostPage({ params }: any) {
     );
   }
 
-  // ⭐ COMMENTS
   const [comments, setComments] = useState<
     { name: string; email: string; message: string; date: string }[]
   >([]);
@@ -164,7 +162,6 @@ export default function BlogPostPage({ params }: any) {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Freeze current scroll position before UI expands
     const currentScroll = window.scrollY;
 
     setComments((prev) => [
@@ -175,11 +172,7 @@ export default function BlogPostPage({ params }: any) {
     setName("");
     setEmail("");
     setMessage("");
-
-    // Open the dropdown automatically
     setShowComments(true);
-
-    // Restore scroll so page does NOT jump
     window.scrollTo({ top: currentScroll });
   };
 
@@ -224,7 +217,6 @@ export default function BlogPostPage({ params }: any) {
         dangerouslySetInnerHTML={{ __html: blog.content }}
       />
 
-      {/* COMMENTS DROPDOWN – NOW BELOW CONTENT, ABOVE FORM */}
       <div
         className={`max-w-[1200px] mx-auto px-4 overflow-hidden transition-all duration-500 ${showComments ? "max-h-[800px] mb-6" : "max-h-0"
           }`}
