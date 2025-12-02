@@ -219,7 +219,7 @@ export default function ContactUs() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="bg-gradient-to-r from-[#1F8593] to-[#052E39] 
+              className="bg-linear-to-r from-[#1F8593] to-[#052E39] 
               text-white px-8 py-4 rounded-lg text-lg w-full md:w-56 
               disabled:opacity-70 disabled:cursor-not-allowed 
               hover:opacity-90 transition-opacity"

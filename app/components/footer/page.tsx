@@ -48,7 +48,7 @@ export default function Footer() {
     <footer className="bg-black text-gray-300 px-6 py-12 md:px-16">
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
         {/* Quick Links */}
-        <div className="">
+        <div className="text-center sm:text-left">
           <h3 className="text-white font-semibold mb-4">Quick Links</h3>
           <ul className="space-y-2">
             <li><a href="/contact" className="hover:text-white">Contact Us</a></li>
@@ -57,9 +57,18 @@ export default function Footer() {
             <li><a href="/blog" className="hover:text-white">Blogs</a></li>
           </ul>
         </div>
+        {/* Contact Info */}
+        <div className="col-span-1 text-center sm:text-left">
+          <h3 className="text-white font-semibold mb-4">Contact Information</h3>
+          <ul className="space-y-2">
+            <li>Phone: +966 9200 10417</li>
+            <li>Email: marketing@alrefaa.co</li>
+            <li>Location: Al Azizyah, Makkah, Saudia</li>
+          </ul>
+        </div>
 
         {/* Policies */}
-        <div className="">
+        <div className="text-center sm:text-left">
           <h3 className="text-white font-semibold mb-4">Policies</h3>
           <ul className="space-y-2">
             <li>Privacy Policy</li>
@@ -69,15 +78,6 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Contact Info */}
-        <div className="col-span-1">
-          <h3 className="text-white font-semibold mb-4">Contact Information</h3>
-          <ul className="space-y-2">
-            <li>Phone: +966 9200 10417</li>
-            <li>Email: marketing@alrefaa.co</li>
-            <li>Location: Al Azizyah, Makkah, Saudia</li>
-          </ul>
-        </div>
 
         {/* Subscribe Section */}
         <div className="bg-gray-800 p-6 rounded-lg col-span-1 w-full">
