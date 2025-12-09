@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState as useReactState } from "react";
+import { useEffect, useState as useReactState, useContext } from "react";
+import { LangContext } from "@/app/lang-provider";
 
 export default function ContactBanner() {
   const [headerHeight, setHeaderHeight] = useReactState(0);
+  const { lang } = useContext(LangContext);
+  const isArabic = lang === "ar";
 
   useEffect(() => {
     const header = document.querySelector("header");
@@ -29,13 +32,40 @@ export default function ContactBanner() {
         className="absolute inset-0 w-full h-full object-cover"
       />
 
-      <div className="relative z-10 text-center text-white max-w-6xl w-full px-3 scale-90">
-        <h1 className="text-4xl md:text-7xl font-semibold mb-2">
-          Contact Us
+      <div 
+        className={`relative z-10 text-white w-full ${
+          isArabic 
+            ? "flex flex-col items-end px-3 sm:px-10 md:px-16 lg:px-28 xl:px-36"
+            : "text-center max-w-6xl px-3 scale-90"
+        }`}
+      >
+
+        {/* Title */}
+        <h1
+          className={`
+            text-4xl md:text-7xl font-semibold mb-2
+            ${isArabic ? "font-arabic text-right" : ""} // Removed 'w-full'
+          `}
+          style={isArabic ? { direction: "rtl" } : {}}
+        >
+          {lang === "en"
+            ? "Contact Us"
+            : "اتصل بنا"}
         </h1>
-        <p className="mb-3 text-3xl md:text-6xl">
-          AL-Riffa - Hotel Management System
+
+        {/* Subtitle */}
+        <p
+          className={`
+            mb-3 text-3xl md:text-6xl
+            ${isArabic ? "font-arabic text-right" : ""} // Removed 'w-full'
+            `}
+          style={isArabic ? { direction: "rtl" } : {}}
+        >
+          {lang === "en"
+            ? "AL-Riffa Hotel Management System"
+            : " الرفاع- نظام إدارة الفنادق"}
         </p>
+
       </div>
     </section>
   );

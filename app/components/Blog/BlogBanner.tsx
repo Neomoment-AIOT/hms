@@ -1,19 +1,22 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState as useReactState } from "react";
+import { useEffect, useContext, useState as useReactState } from "react";
+import { LangContext } from "@/app/lang-provider";
 
 export default function BlogBanner() {
+  const { lang } = useContext(LangContext);
+  const isAr = lang === "ar";
+
   const [headerHeight, setHeaderHeight] = useReactState(0);
 
   useEffect(() => {
     const header = document.querySelector("header");
-    if (header) {
-      setHeaderHeight(header.offsetHeight);
-    }
+    if (header) setHeaderHeight(header.offsetHeight);
 
     const handleResize = () => {
       if (header) setHeaderHeight(header.offsetHeight);
     };
+
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -29,12 +32,32 @@ export default function BlogBanner() {
         className="absolute inset-0 w-full h-full object-cover"
       />
 
-      <div className="relative z-10 text-center text-white max-w-6xl w-full px-3 scale-90">
-        <h1 className="text-4xl md:text-7xl font-semibold mb-2">
-          Al-Riffa Official
+      <div
+        className={`relative z-10 text-white w-full px-3
+          ${isAr ? "text-right pr-40" : "text-center max-w-6xl mx-auto scale-90"}`}
+      >
+        {/* Title */}
+        <h1
+          className={`text-4xl md:text-7xl font-semibold mb-2 ${
+            isAr ? "font-arabic" : ""
+          }`}
+        >
+          {isAr ? "الرفاع الرسمي" : "Al-Riffa Official"}
         </h1>
-        <p className="mb-3 text-3xl md:text-5xl">
-           <Link href="/">Home</Link> / <Link href="/blog">Blogs</Link>
+
+        {/* Breadcrumb */}
+        <p
+          className={`mb-3 text-3xl md:text-5xl ${
+            isAr ? "font-arabic" : ""
+          }`}
+        >
+          <Link href="/" className="hover:underline">
+            {isAr ? "الرئيسية" : "Home"}
+          </Link>{" "}
+          /{" "}
+          <Link href="/blog" className="hover:underline">
+            {isAr ? "المدونات" : "Blogs"}
+          </Link>
         </p>
       </div>
     </section>

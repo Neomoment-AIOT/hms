@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState as useReactState } from "react";
+import { useEffect, useContext, useState as useReactState } from "react";
+import { LangContext } from "@/app/lang-provider";
 
 export default function Label() {
   const [headerHeight, setHeaderHeight] = useReactState(0);
+  const { lang } = useContext(LangContext);
 
   useEffect(() => {
     const header = document.querySelector("header");
@@ -20,7 +22,9 @@ export default function Label() {
 
   return (
     <section
-      className="relative h-[420px] w-full flex items-center justify-center overflow-hidden transition-all duration-300"
+      className={`relative h-[420px] w-full flex items-center justify-center overflow-hidden transition-all duration-300 ${
+        lang === "ar" ? "font-arabic" : ""
+      }`}
       style={{ marginTop: `${headerHeight}px` }}
     >
       <img
@@ -28,13 +32,34 @@ export default function Label() {
         alt="Banner"
         className="absolute inset-0 w-full h-full object-cover"
       />
-
-      <div className="relative z-10 text-center text-white max-w-6xl w-full px-3 scale-90">
-        <h1 className="text-4xl md:text-7xl font-semibold mb-2">
-          About AL-Riffa
+      <div 
+        className={`relative z-10 text-white w-full ${
+          lang === "ar" 
+            ? "flex flex-col items-end px-3 sm:px-10 md:px-16 lg:px-28 xl:px-36"
+            : "text-center px-3"
+        }`}
+      >
+        
+        {/* Title */}
+        <h1
+          className={`
+            text-4xl md:text-7xl font-semibold mb-2
+            ${lang === "ar" ? "font-arabic text-right" : ""}
+          `}
+          style={lang === "ar" ? { direction: "rtl" } : {}}
+        >
+          {lang === "en" ? "About Al-Riffa" : "عن نظام الرفاع "}
         </h1>
-        <p className="mb-3 text-4xl md:text-7xl">
-          Hotel Management System
+
+        {/* Subtitle */}
+        <p
+          className={`
+             mb-3 text-4xl md:text-7xl
+            ${lang === "ar" ? "font-arabic text-right" : ""}
+            `}
+          style={lang === "ar" ? { direction: "rtl" } : {}}
+        >
+          {lang === "en" ? "Hotel Management System" : "نظام إدارة الفنادق"}
         </p>
       </div>
     </section>
