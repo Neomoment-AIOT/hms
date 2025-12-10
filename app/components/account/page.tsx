@@ -5,3 +5,7 @@ export default function AccountPage() {
     </div>
   );
 }
+
+export const AccountComponent = () => {
+  return <div>Account Details</div>;
+};
