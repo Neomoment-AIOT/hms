@@ -1,10 +1,10 @@
 "use client";
 
-import Header from "./components/header/page";
-import Footer from "./components/footer/page";
-import Banner from "./components/Home/Banner";
-import Hotels from "./components/Home/hotels";
-import Offers from "./components/Home/offers";
+import Header from "./_components/header/page";
+import Footer from "./_components/footer/page";
+import Banner from "./_components/Home/Banner";
+import Hotels from "./_components/Home/hotels";
+import Offers from "./_components/Home/offers";
 
 export default function Home() {
   return (

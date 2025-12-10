@@ -1,7 +1,7 @@
 "use client";
 
-import Header from "@/app/components/header/page";
-import Footer from "@/app/components/footer/page";
+import Header from "@/app/_components/header/page";
+import Footer from "@/app/_components/footer/page";
 import { useState, FormEvent, useContext } from "react";
 import { useParams } from "next/navigation";
 import { LangContext } from "@/app/lang-provider";

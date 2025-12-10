@@ -1,8 +1,8 @@
-import Header from "../components/header/page";
-import ContactBanner from "../components/Contact/contactBanner";
-import ContactUs from "../components/Contact/contact_us";
-import Map from "../components/Contact/map";
-import Footer from "../components/footer/page";
+import Header from "../_components/header/page";
+import ContactBanner from "../_components/Contact/contactBanner";
+import ContactUs from "../_components/Contact/contact_us";
+import Map from "../_components/Contact/map";
+import Footer from "../_components/footer/page";
 
 export default function Contact() {
     return (
