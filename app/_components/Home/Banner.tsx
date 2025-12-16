@@ -28,6 +28,7 @@ export default function Banner() {
     adult: 0,
     children: 0,
   });
+
   const [showGuestPopup, setShowGuestPopup] = useState(false);
 
   const [headerHeight, setHeaderHeight] = useReactState(0);
@@ -35,6 +36,7 @@ export default function Banner() {
   const [menuLeftPosition, setMenuLeftPosition] = useReactState(0);
 
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const popupContentRef = useRef<HTMLDivElement | null>(null);
 
   const handleSearch = () => {
     const city = lang === "en" ? "Makkah" : "مكة";
@@ -58,12 +60,19 @@ export default function Banner() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Click outside popup
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+      if (
+        popupRef.current &&
+        !popupRef.current.contains(event.target as Node) &&
+        popupContentRef.current &&
+        !popupContentRef.current.contains(event.target as Node)
+      ) {
         setShowGuestPopup(false);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -100,10 +109,8 @@ export default function Banner() {
       <div className="relative z-10 text-center text-white max-w-6xl w-full px-3 scale-90">
         {/* Title */}
         <h1
-          className={`text-2xl md:text-5xl font-semibold mb-2 ${
-            lang === "ar" ? "font-arabic text-right w-full" : ""
-          }`}
-          style={lang === "ar" ? { direction: "rtl" } : {}}
+          className={`text-2xl md:text-5xl font-semibold mb-2 ${lang === "ar" ? "font-arabic text-right w-full" : ""
+            }`}
         >
           {lang === "en"
             ? "Book Your Hotel With Ease Today."
@@ -112,10 +119,8 @@ export default function Banner() {
 
         {/* Subtitle */}
         <p
-          className={`mb-3 text-sm md:text-base ${
-            lang === "ar" ? "font-arabic text-right w-full" : ""
-          }`}
-          style={lang === "ar" ? { direction: "rtl" } : {}}
+          className={`mb-3 text-sm md:text-base ${lang === "ar" ? "font-arabic text-right w-full" : ""
+            }`}
         >
           {lang === "en"
             ? "Let us help you find the perfect stay for your Hajj and Umrah journey."
@@ -124,25 +129,17 @@ export default function Banner() {
 
         {/* Search Form */}
         <div
-          className={`flex flex-col md:flex-row gap-2 justify-center items-stretch rounded-lg p-2 shadow-md text-black ${
-            lang === "ar" ? "text-right" : "text-left"
-          }`}
+          className={`flex flex-col md:flex-row gap-2 justify-center items-stretch rounded-lg p-2 shadow-md text-black ${lang === "ar" ? "text-right" : "text-left"
+            }`}
         >
           {/* City */}
           <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12 px-3 pt-5 pb-1">
             <label
-              className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs ${
-                lang === "ar" ? "font-arabic" : ""
-              }`}
+              className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
             >
               {lang === "en" ? "City" : "المدينة"}
             </label>
-
-            <span
-              className={`font-medium text-ms mt-0.5 ${
-                lang === "ar" ? "font-arabic" : ""
-              }`}
-            >
+            <span className={`${lang === "ar" ? "font-arabic" : ""}`}>
               {lang === "en" ? "Makkah" : "مكة المكرمة"}
             </span>
           </div>
@@ -154,13 +151,10 @@ export default function Banner() {
                 type="date"
                 value={arrival}
                 onChange={(e) => setArrival(e.target.value)}
-                className="peer px-3 pt-5 pb-1 w-full text-ms rounded focus:outline-none"
+                className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
               />
-
               <label
-                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs ${
-                  lang === "ar" ? "font-arabic" : ""
-                }`}
+                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
               >
                 {lang === "en" ? "Arrival Date" : "تاريخ الوصول"}
               </label>
@@ -174,13 +168,10 @@ export default function Banner() {
                 type="date"
                 value={departure}
                 onChange={(e) => setDeparture(e.target.value)}
-                className="peer px-3 pt-5 pb-1 w-full text-ms rounded focus:outline-none"
+                className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
               />
-
               <label
-                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs ${
-                  lang === "ar" ? "font-arabic" : ""
-                }`}
+                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
               >
                 {lang === "en" ? "Departure Date" : "تاريخ المغادرة"}
               </label>
@@ -196,20 +187,19 @@ export default function Banner() {
               <button
                 type="button"
                 onClick={toggleGuestMenu}
-                className="peer w-full text-left px-3 pt-5 pb-1 rounded focus:outline-none"
+                className={`peer w-full px-3 pt-5 pb-1 rounded focus:outline-none
+        ${lang === "ar" ? "text-right" : "text-left"}
+      `}
               >
                 <label
-                  className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs ${
-                    lang === "ar" ? "font-arabic" : ""
-                  }`}
+                  className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
                 >
                   {lang === "en" ? "Guests & Rooms" : "الضيوف والغرف"}
                 </label>
 
                 <div
-                  className={`text-black font-medium text-sm mt-1 truncate ${
-                    lang === "ar" ? "font-arabic text-right" : ""
-                  }`}
+                  className={`text-black font-medium text-sm mt-1 truncate ${lang === "ar" ? "font-arabic text-right" : ""
+                    }`}
                 >
                   {guestDetails.room}{" "}
                   {lang === "en"
@@ -238,43 +228,48 @@ export default function Banner() {
                 </div>
               </button>
 
-              {/* Popup */}
               {showGuestPopup &&
                 createPortal(
                   <div
-                    className={`absolute mt-2 bg-white shadow-lg rounded-md w-[80%] lg:w-fit p-2 text-xs z-20 ${
-                      lang === "ar" ? "font-arabic text-right" : "text-left"
-                    }`}
+                    ref={popupContentRef}
+                    className={`absolute mt-2 bg-white shadow-lg rounded-md w-[80%] lg:w-fit p-2 text-xs z-20 ${lang === "ar" ? "font-arabic text-right rtl" : "text-left"
+                      }`}
                     style={{
                       top: menuTopPosition,
                       left: menuLeftPosition,
                     }}
                   >
-                    {(
-                      [
-                        { label: lang === "en" ? "Room" : "غرفة", key: "room" },
-                        { label: lang === "en" ? "Adult" : "بالغ", key: "adult" },
-                        { label: lang === "en" ? "Children" : "أطفال", key: "children" },
-                      ] as { label: string; key: keyof GuestDetails }[]
-                    ).map((item) => (
+                    {[
+                      { label: lang === "en" ? "Room" : "غرفة", key: "room" },
+                      { label: lang === "en" ? "Adult" : "بالغ", key: "adult" },
+                      { label: lang === "en" ? "Children" : "أطفال", key: "children" },
+                    ].map((item) => (
                       <div
                         key={item.key}
-                        className="flex items-center justify-between mb-1.5 last:mb-0"
+                        className={`flex items-center justify-between mb-1.5 last:mb-0 ${lang === "ar" ? "flex-row-reverse" : ""
+                          }`}
                       >
                         <span className="text-gray-700 font-medium">{item.label}</span>
 
-                        <div className={`flex items-center ${lang === "ar" ? "space-x-reverse space-x-1" : "space-x-1"}`}>
+                        <div
+                          className={`flex items-center ${lang === "ar" ? "flex-row-reverse space-x-reverse space-x-1" : "space-x-1"
+                            }`}
+                        >
                           <button
                             type="button"
-                            onClick={() => changeDetail(item.key, -1)}
+                            onClick={() => changeDetail(item.key as keyof GuestDetails, -1)}
                             className="px-1.5 py-0.5 bg-gray-200 rounded hover:bg-gray-300"
                           >
                             -
                           </button>
-                          <span className="w-4 text-center">{guestDetails[item.key]}</span>
+
+                          <span className="w-4 text-center">
+                            {guestDetails[item.key as keyof GuestDetails]}
+                          </span>
+
                           <button
                             type="button"
-                            onClick={() => changeDetail(item.key, 1)}
+                            onClick={() => changeDetail(item.key as keyof GuestDetails, 1)}
                             className="px-1.5 py-0.5 bg-gray-200 rounded hover:bg-gray-300"
                           >
                             +
@@ -283,7 +278,10 @@ export default function Banner() {
                       </div>
                     ))}
 
-                    <div className={`flex justify-between mt-2 ${lang === "ar" ? "space-x-reverse space-x-2" : "space-x-2"}`}>
+                    <div
+                      className={`flex justify-between mt-2 ${lang === "ar" ? "flex-row-reverse space-x-reverse space-x-2" : "space-x-2"
+                        }`}
+                    >
                       <button
                         type="button"
                         onClick={() =>
@@ -294,7 +292,10 @@ export default function Banner() {
                         {lang === "en" ? "Reset" : "إعادة تعيين"}
                       </button>
 
-                      <div className={`flex ${lang === "ar" ? "space-x-reverse space-x-2" : "space-x-2"}`}>
+                      <div
+                        className={`flex ${lang === "ar" ? "flex-row-reverse space-x-reverse space-x-2" : "space-x-2"
+                          }`}
+                      >
                         <button
                           type="button"
                           onClick={() => setShowGuestPopup(false)}
@@ -322,9 +323,8 @@ export default function Banner() {
           <div className={`flex flex-col justify-end ${lang === "ar" ? "items-start" : "items-end"}`}>
             <button
               onClick={handleSearch}
-              className={`bg-[#EF4050] hover:bg-[#d93848] text-white px-10 py-1.5 mb-5 lg:mb-0 rounded transition w-full md:w-auto h-full text-ms font-medium ${
-                lang === "ar" ? "font-arabic" : ""
-              }`}
+              className={`bg-[#EF4050] hover:bg-[#d93848] text-white px-10 py-1.5 mb-5 lg:mb-0 rounded transition w-full md:w-auto h-full text-ms font-medium ${lang === "ar" ? "font-arabic" : ""
+                }`}
             >
               {lang === "en" ? "Search Hotels" : "ابحث عن الفنادق"}
             </button>

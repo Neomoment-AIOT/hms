@@ -6,7 +6,7 @@ import { LangContext } from "@/app/lang-provider";
 type IconProps = React.SVGProps<SVGSVGElement>;
 type IconComponent = React.FC<IconProps>;
 
-
+/* ---------------- ICONS ---------------- */
 const WifiIcon: IconComponent = (props) => (
   <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.7} {...props}>
     <path d="M4.5 9.5A11.5 11.5 0 0 1 12 7c2.73 0 5.23.96 7.5 2.5" stroke="currentColor" strokeLinecap="round" />
@@ -86,7 +86,7 @@ const WheelchairIcon: IconComponent = (props) => (
   </svg>
 );
 
-
+/* ---------------- SIDEBAR DATA ---------------- */
 const sidebarItems = [
   { en: "Wi-Fi", ar: "الواي فاي", icon: WifiIcon },
   { en: "Front desk", ar: "الاستقبال", icon: BedIcon },
@@ -96,34 +96,25 @@ const sidebarItems = [
   { en: "Non-smoking Hotel", ar: "فندق لغير المدخنين", icon: NoSmokingIcon },
   { en: "Restaurant", ar: "مطعم", icon: RestaurantIcon },
   { en: "Parking", ar: "مواقف السيارات", icon: ParkingIcon },
-  { en: "Fitness Center", ar: "مركز اللياقة", icon: DumbbellIcon },
 ];
 
-
+/* ---------------- AMENITIES COMPONENT ---------------- */
 export default function Amenities() {
   const { lang } = useContext(LangContext);
   const ar = lang === "ar";
 
   return (
-    <section
-      className={`w-full bg-[#0e7c86] py-10 
-      ${ar ? "text-right font-arabic" : "text-left"}`}
-    >
+    <section className={`w-full bg-[#0e7c86] py-10 ${ar ? "text-right font-arabic" : "text-left"}`}>
       <div className="mx-auto max-w-7xl px-8">
 
-        <div className="bg-white w-full rounded-[28px] p-6 md:p-10 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className={`bg-white w-full rounded-[28px] p-6 md:p-10 flex flex-col md:flex-row ${ar ? "md:flex-row-reverse" : ""} gap-8`}>
 
           {/* SIDEBAR */}
-          <div className="col-span-1 space-y-6 rounded-[26px] bg-[#f8fafc] px-6 py-6">
+          <div className="md:w-1/4 space-y-6 rounded-[26px] bg-[#f8fafc] px-6 py-6">
             {sidebarItems.map((item, i) => {
               const Icon = item.icon;
               return (
-                <div
-                  key={i}
-                  className={`flex items-center 
-                  ${ar ? "flex-row-reverse space-x-reverse" : ""} 
-                  space-x-3 text-sm text-gray-700`}
-                >
+                <div key={i} className={`flex items-center ${ar ? "flex-row-reverse space-x-reverse" : ""} space-x-3 text-sm text-gray-700`}>
                   <Icon className="w-5 h-5 text-gray-400" />
                   <span className="font-medium">{ar ? item.ar : item.en}</span>
                 </div>
@@ -131,92 +122,56 @@ export default function Amenities() {
             })}
           </div>
 
-          {/* RIGHT SIDE BOXES */}
-          <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-sm">
+          {/* CONTENT */}
+          <div className="md:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
 
-            <AmenityBox
-              ar={ar}
-              Icon={WifiIcon}
-              title_en="Wi-Fi"
-              title_ar="الواي فاي"
-              items_en={["Free Wi-Fi"]}
-              items_ar={["واي فاي مجاني"]}
-            />
+            {ar ? (
+              <>
+                {/* Right column (Column 1) */}
+                <div className="space-y-6 order-3">
+                  <AmenityBox ar={ar} Icon={WifiIcon} title_en="Wi-Fi" title_ar="الواي فاي" items_en={["Free Wi-Fi"]} items_ar={["واي فاي مجاني"]} />
+                  <AmenityBox ar={ar} Icon={RestaurantIcon} title_en="Food & drink" title_ar="الطعام والشراب"
+                    items_en={["Free restaurant Wi-Fi", "Breakfast – Extra charges", "Vending machines"]}
+                    items_ar={["مطعم واي فاي مجاني", "إفطار – رسوم إضافية", "آلات البيع"]}
+                    highlightIndex={1}
+                  />
+                  <AmenityBox ar={ar} Icon={CheckedCircleIcon} title_en="General" title_ar="عام"
+                    items_en={["Lifts", "Breakfast", "Non-smoking hotel", "Multilingual staff", "Business center"]}
+                    items_ar={["المصاعد", "إفطار", "فندق لغير المدخنين", "طاقم عمل متعدد اللغات", "مركز أعمال"]}
+                  />
+                </div>
 
-            <AmenityBox
-              ar={ar}
-              Icon={BedIcon}
-              title_en="Front desk"
-              title_ar="الاستقبال"
-              items_en={["Front desk services", "Laundry service"]}
-              items_ar={["خدمات الاستقبال", "خدمة غسيل الملابس"]}
-            />
+                {/* Middle column (Column 2) */}
+                <div className="space-y-6 order-2">
+                  <AmenityBox ar={ar} Icon={BedIcon} title_en="Front desk" title_ar="مكتب الواجهة الأمامية" items_en={["Front desk services", "Laundry service"]} items_ar={["خدمات مكتب الاستقبال", "خدمة غسيل الملابس"]} />
+                  <AmenityBox ar={ar} Icon={DumbbellIcon} title_en="Beauty & wellness" title_ar="الجمال والعافية" items_en={["Gym / fitness centre"]} items_ar={["صالة ألعاب رياضية / مركز لياقة بدنية"]} />
+                </div>
 
-            <AmenityBox
-              ar={ar}
-              Icon={WheelchairIcon}
-              title_en="Accessibility"
-              title_ar="إمكانية الوصول"
-              items_en={["Wheelchair accessible"]}
-              items_ar={["إمكانية وصول الكراسي المتحركة"]}
-            />
-
-            <AmenityBox
-              ar={ar}
-              Icon={RestaurantIcon}
-              title_en="Food & drink"
-              title_ar="الطعام والشراب"
-              items_en={[
-                "Free restaurant Wi-Fi",
-                "Breakfast – Extra charges",
-                "Vending machines",
-              ]}
-              items_ar={[
-                "واي فاي مجاني في المطعم",
-                "الإفطار – رسوم إضافية",
-                "ماكينات بيع",
-              ]}
-              highlightIndex={1}
-            />
-
-            <AmenityBox
-              ar={ar}
-              Icon={DumbbellIcon}
-              title_en="Beauty & wellness"
-              title_ar="العافية والرياضة"
-              items_en={["Gym / fitness centre"]}
-              items_ar={["مركز اللياقة البدنية"]}
-            />
-
-            <AmenityBox
-              ar={ar}
-              Icon={ParkingIcon}
-              title_en="Parking & transportation"
-              title_ar="مواقف وإنتقالات"
-              items_en={["Parking – Free"]}
-              items_ar={["موقف سيارات – مجاني"]}
-            />
-
-            <AmenityBox
-              ar={ar}
-              Icon={CheckedCircleIcon}
-              title_en="General"
-              title_ar="عام"
-              items_en={[
-                "Lifts",
-                "Breakfast",
-                "Non-smoking hotel",
-                "Multilingual staff",
-                "Business center",
-              ]}
-              items_ar={[
-                "المصاعد",
-                "الإفطار",
-                "فندق لغير المدخنين",
-                "طاقم متعدد اللغات",
-                "مركز أعمال",
-              ]}
-            />
+                {/* Left column (Column 3) */}
+                <div className="space-y-6 order-1">
+                  <AmenityBox ar={ar} Icon={WheelchairIcon} title_en="Accessibility" title_ar="إمكانية الوصول" items_en={["Wheelchair accessible"]} items_ar={["إمكانية وصول الكراسي المتحركة"]} />
+                  <AmenityBox ar={ar} Icon={ParkingIcon} title_en="Parking & transportation" title_ar="مواقف السيارات والنقل" items_en={["Parking – Free"]} items_ar={["وقوف السيارات"]} />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* English version unchanged */}
+                <AmenityBox ar={ar} Icon={WifiIcon} title_en="Wi-Fi" title_ar="الواي فاي" items_en={["Free Wi-Fi"]} items_ar={["واي فاي مجاني"]} />
+                <AmenityBox ar={ar} Icon={BedIcon} title_en="Front desk" title_ar="الاستقبال" items_en={["Front desk services", "Laundry service"]} items_ar={["خدمات الاستقبال", "خدمة غسيل الملابس"]} />
+                <AmenityBox ar={ar} Icon={WheelchairIcon} title_en="Accessibility" title_ar="إمكانية الوصول" items_en={["Wheelchair accessible"]} items_ar={["إمكانية وصول الكراسي المتحركة"]} />
+                <AmenityBox ar={ar} Icon={RestaurantIcon} title_en="Food & drink" title_ar="الطعام والشراب"
+                  items_en={["Free restaurant Wi-Fi", "Breakfast – Extra charges", "Vending machines"]}
+                  items_ar={["واي فاي مجاني في المطعم", "الإفطار – رسوم إضافية", "ماكينات بيع"]}
+                  highlightIndex={1}
+                />
+                <AmenityBox ar={ar} Icon={DumbbellIcon} title_en="Beauty & wellness" title_ar="العافية والرياضة" items_en={["Gym / fitness centre"]} items_ar={["مركز اللياقة البدنية"]} />
+                <AmenityBox ar={ar} Icon={ParkingIcon} title_en="Parking & transportation" title_ar="مواقف وإنتقالات" items_en={["Parking – Free"]} items_ar={["موقف سيارات – مجاني"]} />
+                <AmenityBox ar={ar} Icon={CheckedCircleIcon} title_en="General" title_ar="عام"
+                  items_en={["Lifts", "Breakfast", "Non-smoking hotel", "Multilingual staff", "Business center"]}
+                  items_ar={["المصاعد", "الإفطار", "فندق لغير المدخنين", "طاقم متعدد اللغات", "مركز أعمال"]}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -224,6 +179,7 @@ export default function Amenities() {
   );
 }
 
+/* ---------------- AMENITY BOX ---------------- */
 interface AmenityBoxProps {
   ar: boolean;
   Icon: IconComponent;
@@ -234,47 +190,25 @@ interface AmenityBoxProps {
   highlightIndex?: number;
 }
 
-function AmenityBox({
-  ar,
-  Icon,
-  title_en,
-  title_ar,
-  items_en,
-  items_ar,
-  highlightIndex = -1,
-}: AmenityBoxProps) {
+function AmenityBox({ ar, Icon, title_en, title_ar, items_en, items_ar, highlightIndex = -1 }: AmenityBoxProps) {
   const items = ar ? items_ar : items_en;
 
   return (
     <div>
-      <div
-        className={`flex items-center mb-3 
-        ${ar ? "flex-row-reverse space-x-reverse" : ""} space-x-3`}
-      >
+      <div className={`flex items-center mb-3 ${ar ? "flex-row-reverse space-x-reverse" : ""} space-x-3`}>
         <div className="w-8 h-8 bg-[#e3d7ff] rounded-full flex items-center justify-center text-[#5a3ec8]">
           <Icon className="w-4 h-4" />
         </div>
-
         <h3 className="text-base font-semibold">{ar ? title_ar : title_en}</h3>
       </div>
 
       <ul className="space-y-2 text-gray-700">
         {items.map((text, index) => (
-          <li
-            key={index}
-            className={`flex items-center 
-            ${ar ? "flex-row-reverse space-x-reverse" : ""} space-x-2`}
-          >
+          <li key={index} className={`flex items-center ${ar ? "flex-row-reverse space-x-reverse" : ""} space-x-2`}>
             <span className="text-green-500 text-lg leading-none">✓</span>
-
             {highlightIndex === index ? (
-              <span
-                className={`flex items-center ${
-                  ar ? "flex-row-reverse space-x-reverse" : ""
-                } space-x-2`}
-              >
+              <span className={`flex items-center ${ar ? "flex-row-reverse space-x-reverse" : ""} space-x-2`}>
                 <span>{text.split("–")[0]}</span>
-
                 <span className="bg-[#f9c65c] text-[#7a4b00] text-[11px] px-2 py-0.5 rounded">
                   {ar ? "رسوم إضافية" : "Extra charges"}
                 </span>

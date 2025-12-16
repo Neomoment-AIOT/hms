@@ -29,92 +29,85 @@ const Offers = () => {
   const isArabic = lang === "ar";
 
   return (
-    <section className="p-6 bg-gray-200">
-
-      {/* Title */}
-      <h2 className={`text-3xl font-bold mb-10 ${isArabic ? "font-arabic text-right" : ""}`}>
-        {isArabic ? "فنادق تم اختيارها من أجلك" : "Hotels selected for you"}
-      </h2>
-
-      <div
-        className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 ${
-          isArabic ? "direction-rtl" : ""
-        }`}
-      >
-        {hotels.map((hotel) => (
-          <div
-            key={hotel.id}
-            className={`relative rounded-lg overflow-hidden shadow-lg group hover:shadow-2xl transition-shadow h-80 md:h-96 ${
-              isArabic ? "text-right" : "text-left"
-            }`}
-          >
-            <Image
-              src={hotel.imageUrl}
-              alt={isArabic ? hotel.nameAr : hotel.nameEn}
-              fill
-              className="object-cover"
-            />
-
-            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
-
-            <div className="absolute bottom-0 left-0 w-full p-3 text-white">
-
-              {/* Hotel Name */}
-              <h3 className={`font-semibold text-sm ${isArabic ? "font-arabic" : ""}`}>
-                {isArabic ? hotel.nameAr : hotel.nameEn}
-              </h3>
-
-              {/* Opposite language */}
-              <p className={`text-lg opacity-80 ${isArabic ? "font-arabic" : ""}`}>
-                {isArabic ? hotel.nameEn : hotel.nameAr}
-              </p>
-
-              {/* Ratings + Price */}
-              <div
-                className={`flex items-center mt-2 text-xs ${
-                  isArabic ? "justify-between flex-row-reverse" : "justify-between"
-                }`}
-              >
-                {/* Ratings */}
-                <span className={`${isArabic ? "font-arabic" : ""}`}>
-                  {isArabic ? "★ بدون تقييمات" : "★ No ratings"}
-                </span>
-                <span
-                  className={`bg-[#003243] px-3 py-1 rounded text-white text-sm flex items-center gap-2 ${
-                    isArabic ? "font-arabic" : ""
-                  }`}
-                >
-                  {isArabic ? (
-                    <>
-                      <span>ليلة /</span>
-                      <Image
-                        src="/Riyal_White.png"
-                        alt="Riyal"
-                        width={14}
-                        height={14}
-                      />
-                      <span>{toArabicNumbers(hotel.price)}</span>
-                    </>
-                  ) : (
-                    <>
-                      Night /
-                      <Image
-                        src="/Riyal_White.png"
-                        alt="Riyal"
-                        width={14}
-                        height={14}
-                      />
-                      {hotel.price}
-                    </>
-                  )}
-                </span>
+      <section className="p-6 bg-gray-200" dir={isArabic ? "rtl" : "ltr"}>
+  
+        {/* Title */}
+        <h2 className={`text-3xl font-bold mb-10 ${isArabic ? "font-arabic text-right" : ""}`}>
+          {isArabic ? "فنادق تم اختيارها من أجلك" : "Hotels selected for you"}
+        </h2>
+  
+        <div
+          className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 ${isArabic ? "direction-rtl" : ""}`}
+        >
+          {hotels.map((hotel) => (
+            <div
+              key={hotel.id}
+              className={`relative rounded-lg overflow-hidden shadow-lg group hover:shadow-2xl transition-shadow h-80 md:h-96 ${isArabic ? "text-right" : "text-left"}`}
+            >
+              <Image
+                src={hotel.imageUrl}
+                alt={isArabic ? hotel.nameAr : hotel.nameEn}
+                fill
+                className="object-cover"
+              />
+  
+              <div className="absolute inset-0 bg-linaer-to-t from-black/70 via-black/20 to-transparent" />
+              <div className={`absolute bottom-0 ${isArabic ? "right-0" : "left-0"} w-full p-3 text-white`}>
+  
+                {/* Hotel Name */}
+                <h3 className={`font-semibold text-sm ${isArabic ? "font-arabic" : ""}`}>
+                  {isArabic ? hotel.nameAr : hotel.nameEn}
+                </h3>
+  
+                {/* Opposite language */}
+                <p className={`text-lg opacity-80 ${isArabic ? "font-arabic" : ""}`}>
+                  {isArabic ? hotel.nameEn : hotel.nameAr}
+                </p>
+  
+                {/* Ratings + Price */}
+                <div className="flex items-center mt-2 text-xs justify-between">
+  
+                  {/* Ratings */}
+                  <span className={`${isArabic ? "font-arabic text-right" : ""}`}>
+                    {isArabic ? "بدون تقييمات ★" : "★ No ratings"}
+                  </span>
+  
+                  {/* Price */}
+                  <span
+                    className={`bg-[#003243] px-3 py-1 rounded text-white text-sm flex items-center gap-1.5 ${isArabic ? "font-arabic" : ""}`}
+                    style={isArabic ? { flexDirection: "row", justifyContent: "flex-start" } : {}}
+                  >
+                    {isArabic ? (
+                      <>
+                        <span>{toArabicNumbers(hotel.price)}</span>
+                        <Image
+                          src="/Riyal_White.png"
+                          alt="Riyal"
+                          width={14}
+                          height={14}
+                        />
+                        <span>/ ليلة</span>
+                      </>
+                    ) : (
+                      <>
+                        Night /
+                        <Image
+                          src="/Riyal_White.png"
+                          alt="Riyal"
+                          width={14}
+                          height={14}
+                        />
+                        {hotel.price}
+                      </>
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-};
+          ))}
+        </div>
+      </section>
+    );
+  };
 
 export default Offers;
