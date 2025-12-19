@@ -39,13 +39,7 @@ export default function Banner() {
   const popupContentRef = useRef<HTMLDivElement | null>(null);
 
   const handleSearch = () => {
-    const city = lang === "en" ? "Makkah" : "مكة";
-    router.push(
-      `/search?city=${encodeURIComponent(city)}&arrival=${encodeURIComponent(
-        arrival
-      )}&departure=${encodeURIComponent(departure)}&rooms=${guestDetails.room
-      }&adults=${guestDetails.adult}&children=${guestDetails.children}`
-    );
+    router.push("/Hotel_Filter");
   };
 
   useEffect(() => {
