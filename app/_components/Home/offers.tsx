@@ -11,7 +11,7 @@ type Hotel = {
 };
 
 const hotels: Hotel[] = [
-  { id: 1, nameEn: "Al-Refaa Ria Bakhsh Hotel", nameAr: "فندق الرفاع ريع بخش", price: 250, imageUrl: "/hotel/hotel1.jpg" },
+  { id: 1, nameEn: "Kudi Tower", nameAr: "كدي تاور", price: 250, imageUrl: "/hotel/hotel1.jpg" },
   { id: 2, nameEn: "Al-Refaa Al-Sadd Hotel", nameAr: "فندق الرفاع السد", price: 290, imageUrl: "/hotel/hotel2.jpeg" },
   { id: 3, nameEn: "Karam Al-Refaa Hotel", nameAr: "فندق كرم الرفاع", price: 190, imageUrl: "/hotel/hotel3.jpeg" },
   { id: 4, nameEn: "Barkat Al-Refaa Hotel", nameAr: "فندق بركة الرفاع", price: 224, imageUrl: "/hotel/hotel4.jpeg" },

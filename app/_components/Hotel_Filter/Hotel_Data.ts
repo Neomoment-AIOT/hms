@@ -1,8 +1,8 @@
 export const hotelsData = [
   {
     id: 1,
-    name: "Al-Refaa Ri’a Bakhsh Hotel",
-    arabicName: "فندق الرفاع ريع بخش",
+    name: "Kudi Tower",
+    arabicName: "كدي تاور",
     image: "/hotel/hotel1.jpg",
     price: 250,
     rating: 3.9,
