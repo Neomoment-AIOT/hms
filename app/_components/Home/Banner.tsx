@@ -129,7 +129,7 @@ export default function Banner() {
           {/* City */}
           <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12 px-3 pt-5 pb-1">
             <label
-              className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
+              className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 font-arabic text-gray-500 text-xs`}
             >
               {lang === "en" ? "City" : "المدينة"}
             </label>
@@ -148,7 +148,7 @@ export default function Banner() {
                 className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
               />
               <label
-                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
+                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} font-arabic top-2.5 text-gray-500 text-xs`}
               >
                 {lang === "en" ? "Arrival Date" : "تاريخ الوصول"}
               </label>
@@ -165,7 +165,7 @@ export default function Banner() {
                 className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
               />
               <label
-                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
+                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} font-arabic top-2.5 text-gray-500 text-xs`}
               >
                 {lang === "en" ? "Departure Date" : "تاريخ المغادرة"}
               </label>
@@ -186,7 +186,7 @@ export default function Banner() {
       `}
               >
                 <label
-                  className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}
+                  className={`absolute ${lang === "ar" ? "right-3" : "left-3"} font-arabic top-2.5 text-gray-500 text-xs`}
                 >
                   {lang === "en" ? "Guests & Rooms" : "الضيوف والغرف"}
                 </label>

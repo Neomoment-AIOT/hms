@@ -5,7 +5,7 @@ import { FaBars, FaTimes, FaGlobe, FaUserCircle } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { LangContext } from "@/app/lang-provider";
 import Link from "next/link";
-
+import RetrieveBooking from "@/app/Retrive_Booking/page";
 import SignIn from "../signin/page";
 import SignUp from "../signup/page";
 import ForgotPassword from "../forgot_password/page";
@@ -32,6 +32,7 @@ export default function Header() {
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [isRetrieveBookingOpen, setIsRetrieveBookingOpen] = useState(false);
 
   // Load user from localStorage
   useEffect(() => {
@@ -97,9 +98,7 @@ export default function Header() {
               {isLangDropdownOpen && (
                 <div className="absolute right-0 mt-2 bg-white text-black rounded shadow w-32">
                   <button
-                    className={`w-full text-left px-4 py-2 hover:bg-gray-200 ${
-                      otherLanguage === "ar" ? "font-arabic" : ""
-                    }`}
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-200 ${otherLanguage === "ar" ? "font-arabic" : ""}`}
                     onClick={() => selectLanguage(otherLanguage)}
                   >
                     {otherLanguage === "en" ? "English" : "العربية"}
@@ -108,8 +107,9 @@ export default function Header() {
               )}
             </div>
 
+            {/* Desktop Retrieve Booking */}
             <button
-              onClick={() => router.push("/booking")}
+              onClick={() => setIsRetrieveBookingOpen(true)}
               className="border border-white px-3 py-1 rounded hover:bg-white hover:text-teal-700"
             >
               {lang === "en" ? "Retrieve Booking" : "استرداد الحجز الخاص بي"}
@@ -163,9 +163,8 @@ export default function Header() {
 
         {/* Mobile Menu */}
         <div
-          className={`fixed top-0 left-0 h-full bg-white text-black w-[90%] transform ${
-            isMenuOpen ? "translate-x-0" : "-translate-x-full"
-          } transition-transform duration-300 z-40 shadow-lg ${isArabic ? "font-arabic" : ""}`}
+          className={`fixed top-0 left-0 h-full bg-white text-black w-[90%] transform ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+            } transition-transform duration-300 z-40 shadow-lg ${isArabic ? "font-arabic" : ""}`}
           dir={isArabic ? "rtl" : "ltr"}
         >
           <div className="flex justify-between items-center p-4 border-b">
@@ -200,8 +199,12 @@ export default function Header() {
               )}
             </div>
 
+            {/* Mobile Retrieve Booking */}
             <button
-              onClick={() => { router.push("/booking"); toggleMenu(); }}
+              onClick={() => {
+                setIsRetrieveBookingOpen(true);
+                toggleMenu();
+              }}
               className="border border-teal-600 px-4 py-2 rounded hover:bg-teal-600 hover:text-white"
             >
               {lang === "en" ? "Retrieve Booking" : "استرداد الحجز الخاص بي"}
@@ -258,6 +261,17 @@ export default function Header() {
           openSignIn={() => { setIsForgotOpen(false); setIsSignInOpen(true); }}
         />
       )}
+
+      {/* Retrieve Booking Modal */}
+      {isRetrieveBookingOpen && (
+        <RetrieveBooking
+          isOpen={isRetrieveBookingOpen}
+          onClose={() => setIsRetrieveBookingOpen(false)}
+          openSignIn={() => setIsSignInOpen(true)}
+          user={user} // pass the logged-in user state
+        />
+      )}
+
     </>
   );
 }
