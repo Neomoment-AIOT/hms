@@ -176,7 +176,7 @@ export default function Footer() {
             </button>
           </form>
 
-          <div className="min-h-[24px] mb-2">
+          <div className="min-h-6 mb-2">
             {status.success && (
               <p className="text-green-400 text-sm">
                 {isArabic ? "تم الاشتراك بنجاح!" : "Subscribed successfully!"}
@@ -215,11 +215,11 @@ export default function Footer() {
             ${isArabic ? "flex-row-reverse space-x-reverse space-x-6" : "space-x-4"}
           `}
         >
-          <a className="text-white border border-gray-200 p-3 rounded-full"><FaLinkedin size={24} /></a>
-          <a className="text-white border border-gray-200 p-3 rounded-full"><FaFacebook size={24} /></a>
-          <a className="text-white border border-gray-200 p-3 rounded-full"><SiX size={24} /></a>
-          <a className="text-white border border-gray-200 p-3 rounded-full"><FaInstagram size={24} /></a>
-          <a className="text-white border border-gray-200 p-3 rounded-full"><FaWhatsapp size={24} /></a>
+          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><FaLinkedin size={24} /></a>
+          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><FaFacebook size={24} /></a>
+          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><SiX size={24} /></a>
+          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><FaInstagram size={24} /></a>
+          <a href="https://wa.me/1234567890" target="_blank" rel="noopener noreferrer" className="text-white border border-gray-200 p-3 rounded-full"><FaWhatsapp size={24} /></a>
         </div>
       </div>
     </footer>

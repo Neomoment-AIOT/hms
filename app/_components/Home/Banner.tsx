@@ -8,8 +8,11 @@ import {
   useState as useReactState,
 } from "react";
 import { useRouter } from "next/navigation";
+import { FaMapMarkerAlt } from "react-icons/fa"
 import { createPortal } from "react-dom";
 import { LangContext } from "@/app/lang-provider";
+import ArabicCalendar from "../ArabicCalendar";
+import { format } from "date-fns";
 
 type GuestDetails = {
   room: number;
@@ -21,8 +24,15 @@ export default function Banner() {
   const { lang } = useContext(LangContext);
   const router = useRouter();
 
-  const [arrival, setArrival] = useState("");
-  const [departure, setDeparture] = useState("");
+  const [arrivalDate, setArrivalDate] = useState<Date | undefined>(undefined);
+  const [departureDate, setDepartureDate] = useState<Date | undefined>(undefined);
+
+  const [showArrivalCalendar, setShowArrivalCalendar] = useState(false);
+  const [showDepartureCalendar, setShowDepartureCalendar] = useState(false);
+
+  const [arrivalPos, setArrivalPos] = useState({ top: 0, left: 0 });
+  const [departurePos, setDeparturePos] = useState({ top: 0, left: 0 });
+  const [guestPos, setGuestPos] = useState({ top: 0, left: 0 });
   const [guestDetails, setGuestDetails] = useState<GuestDetails>({
     room: 0,
     adult: 0,
@@ -35,12 +45,60 @@ export default function Banner() {
   const [menuTopPosition, setMenuTopPosition] = useReactState(0);
   const [menuLeftPosition, setMenuLeftPosition] = useReactState(0);
 
+  const arrivalRef = useRef<HTMLDivElement | null>(null);
+  const departureRef = useRef<HTMLDivElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
   const popupContentRef = useRef<HTMLDivElement | null>(null);
 
   const handleSearch = () => {
     router.push("/Hotel_Filter");
   };
+
+  const updatePositions = () => {
+    if (arrivalRef.current) {
+      const rect = arrivalRef.current.getBoundingClientRect();
+      setArrivalPos({ top: rect.bottom + window.scrollY + 5, left: rect.left + window.scrollX });
+    }
+    if (departureRef.current) {
+      const rect = departureRef.current.getBoundingClientRect();
+      setDeparturePos({ top: rect.bottom + window.scrollY + 5, left: rect.left + window.scrollX });
+    }
+    if (popupRef.current) {
+      const rect = popupRef.current.getBoundingClientRect();
+      setGuestPos({ top: rect.bottom + window.scrollY + 5, left: rect.left + window.scrollX });
+    }
+  };
+
+  useEffect(() => {
+    const handleScrollOrResize = () => {
+      if (showArrivalCalendar || showDepartureCalendar) updatePositions();
+    };
+
+    window.addEventListener("scroll", handleScrollOrResize);
+    window.addEventListener("resize", handleScrollOrResize);
+
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+  }, [showArrivalCalendar, showDepartureCalendar]);
+
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (arrivalRef.current?.contains(target)) return;
+      if (departureRef.current?.contains(target)) return;
+      if (popupRef.current?.contains(target)) return;
+
+      setShowArrivalCalendar(false);
+      setShowDepartureCalendar(false);
+      setShowGuestPopup(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const header = document.querySelector("header");
@@ -54,7 +112,6 @@ export default function Banner() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Click outside popup
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -138,38 +195,50 @@ export default function Banner() {
             </span>
           </div>
 
-          {/* Arrival Date */}
-          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12">
-            <div className="w-full relative">
-              <input
-                type="date"
-                value={arrival}
-                onChange={(e) => setArrival(e.target.value)}
-                className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
-              />
-              <label
-                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} font-arabic top-2.5 text-gray-500 text-xs`}
-              >
+          {/* Arrival date */}
+          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12" ref={arrivalRef}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); updatePositions(); setShowArrivalCalendar(!showArrivalCalendar); setShowDepartureCalendar(false); }}
+              className="w-full h-full text-left px-3 pt-5 pb-1 focus:outline-none"
+            >
+              <label className={`absolute ${lang === "ar" ? "right-3" : "left-3"} font-arabic top-2.5 text-gray-500 text-xs cursor-pointer`}>
                 {lang === "en" ? "Arrival Date" : "تاريخ الوصول"}
               </label>
-            </div>
+              <span className={`text-sm ${lang === 'ar' ? 'font-arabic text-right block' : ''}`}>
+                {arrivalDate
+                  ? lang === "en"
+                    ? format(arrivalDate, "dd/MM/yyyy")
+                    : format(arrivalDate, "yyyy/MM/dd")
+                  : lang === "en"
+                    ? "-- / -- / ----"
+                    : "---- / -- / --"
+                }
+              </span>
+            </button>
           </div>
 
-          {/* Departure Date */}
-          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12">
-            <div className="w-full relative">
-              <input
-                type="date"
-                value={departure}
-                onChange={(e) => setDeparture(e.target.value)}
-                className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
-              />
-              <label
-                className={`absolute ${lang === "ar" ? "right-3" : "left-3"} font-arabic top-2.5 text-gray-500 text-xs`}
-              >
+          {/* Departure date */}
+          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12" ref={departureRef}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); updatePositions(); setShowDepartureCalendar(!showDepartureCalendar); setShowArrivalCalendar(false); }}
+              className="w-full h-full text-left px-3 pt-5 pb-1 focus:outline-none"
+            >
+              <label className={`absolute ${lang === "ar" ? "right-3" : "left-3"} font-arabic top-2.5 text-gray-500 text-xs cursor-pointer`}>
                 {lang === "en" ? "Departure Date" : "تاريخ المغادرة"}
               </label>
-            </div>
+              <span className={`text-sm ${lang === 'ar' ? 'font-arabic text-right block' : ''}`}>
+                {departureDate
+                  ? lang === "en"
+                    ? format(departureDate, "dd/MM/yyyy")
+                    : format(departureDate, "yyyy/MM/dd")
+                  : lang === "en"
+                    ? "-- / -- / ----"
+                    : "---- / -- / --"
+                }
+              </span>
+            </button>
           </div>
 
           {/* Guests & Rooms */}
@@ -222,10 +291,64 @@ export default function Banner() {
                 </div>
               </button>
 
+              {/* Arrival Calendar Portal */}
+              {showArrivalCalendar && createPortal(
+                <div
+                  className="absolute z-50"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    top: arrivalPos.top,
+                    left: arrivalPos.left,
+                    transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)",
+                    transformOrigin: "top left",
+                  }}
+                >
+                  <ArabicCalendar
+                    lang={lang}
+                    selected={arrivalDate}
+                    showClearButton={true}
+                    onSelect={(date: Date | undefined) => {
+                      setArrivalDate(date);
+                      setShowArrivalCalendar(false);
+                      if (date) setShowDepartureCalendar(true);
+                    }}
+                  />
+                </div>,
+                document.body
+              )}
+
+              {/* Departure Calendar Portal */}
+              {showDepartureCalendar && createPortal(
+                <div
+                  className="absolute z-50"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    top: departurePos.top,
+                    left: departurePos.left,
+                    transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)",
+                    transformOrigin: "top left",
+                  }}
+                >
+                  <ArabicCalendar
+                    lang={lang}
+                    selected={departureDate}
+                    showClearButton={true}
+                    disabled={(date) => arrivalDate ? date < arrivalDate : date < new Date()}
+                    onSelect={(date: Date | undefined) => {
+                      setDepartureDate(date);
+                      setShowDepartureCalendar(false);
+                    }}
+                  />
+                </div>,
+                document.body
+              )}
+
               {showGuestPopup &&
                 createPortal(
                   <div
                     ref={popupContentRef}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     className={`absolute mt-2 bg-white shadow-lg rounded-md w-[80%] lg:w-fit p-2 text-xs z-20 ${lang === "ar" ? "font-arabic text-right rtl" : "text-left"
                       }`}
                     style={{

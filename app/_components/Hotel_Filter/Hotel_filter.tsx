@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useContext } from "react";
+import { useState, useRef, useContext, useEffect } from "react";
 import { createPortal } from "react-dom";
 import HotelList from "./Hotel_List";
 import { hotelsData } from "./Hotel_Data";
 import { LangContext } from "@/app/lang-provider";
+import ArabicCalendar from "../ArabicCalendar";
+import { format } from "date-fns";
 
 /* ---------------- TYPES ---------------- */
 type Filters = {
@@ -25,20 +27,89 @@ type GuestDetails = {
 export default function HotelFilter() {
   const { lang } = useContext(LangContext);
 
-  /* ---------------- BANNER STATE ---------------- */
-  const [arrival, setArrival] = useState("");
-  const [departure, setDeparture] = useState("");
+  /* ---------------- DATE & GUEST STATE ---------------- */
+  const [arrival, setArrival] = useState<Date | undefined>(undefined);
+  const [departure, setDeparture] = useState<Date | undefined>(undefined);
+  const [showArrivalCalendar, setShowArrivalCalendar] = useState(false);
+  const [showDepartureCalendar, setShowDepartureCalendar] = useState(false);
+  const [arrivalPos, setArrivalPos] = useState({ top: 0, left: 0 });
+  const [departurePos, setDeparturePos] = useState({ top: 0, left: 0 });
+
   const [guestDetails, setGuestDetails] = useState<GuestDetails>({
     room: 0,
     adult: 0,
     children: 0,
   });
   const [showGuestPopup, setShowGuestPopup] = useState(false);
-  const popupRef = useRef<HTMLDivElement | null>(null);
-  const popupContentRef = useRef<HTMLDivElement | null>(null);
   const [menuTopPosition, setMenuTopPosition] = useState(0);
   const [menuLeftPosition, setMenuLeftPosition] = useState(0);
 
+  const arrivalRef = useRef<HTMLDivElement | null>(null);
+  const departureRef = useRef<HTMLDivElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const popupContentRef = useRef<HTMLDivElement | null>(null);
+
+  /* ---------------- FILTER STATE ---------------- */
+  const [filters, setFilters] = useState<Filters>({
+    rating: null,
+    propertyViews: [],
+    guestRatings: [],
+    minPrice: 0,
+    maxPrice: 500,
+    roomTypes: [],
+  });
+
+  const [appliedFilters, setAppliedFilters] = useState<Filters>(filters);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  /* ---------------- POSITION UPDATE ---------------- */
+  const updatePositions = () => {
+    if (arrivalRef.current) {
+      const rect = arrivalRef.current.getBoundingClientRect();
+      setArrivalPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+    }
+    if (departureRef.current) {
+      const rect = departureRef.current.getBoundingClientRect();
+      setDeparturePos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+    }
+    if (popupRef.current) {
+      const rect = popupRef.current.getBoundingClientRect();
+      setMenuTopPosition(rect.bottom + window.scrollY);
+      setMenuLeftPosition(rect.left + window.scrollX);
+    }
+  };
+
+  useEffect(() => {
+    const handleScrollOrResize = () => {
+      if (showArrivalCalendar || showDepartureCalendar) updatePositions();
+    };
+    window.addEventListener("scroll", handleScrollOrResize);
+    window.addEventListener("resize", handleScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+  }, [showArrivalCalendar, showDepartureCalendar]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        arrivalRef.current?.contains(target) ||
+        departureRef.current?.contains(target) ||
+        popupRef.current?.contains(target)
+      )
+        return;
+
+      setShowArrivalCalendar(false);
+      setShowDepartureCalendar(false);
+      setShowGuestPopup(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  /* ---------------- GUEST HANDLERS ---------------- */
   const changeDetail = (key: keyof GuestDetails, delta: number) => {
     setGuestDetails((prev) => {
       const next = { ...prev };
@@ -56,32 +127,13 @@ export default function HotelFilter() {
     setShowGuestPopup(!showGuestPopup);
   };
 
-  const handleSearch = () => {
-    console.log({ arrival, departure, guestDetails });
-  };
-
-  /* ---------------- FILTER STATE ---------------- */
-  const [filters, setFilters] = useState<Filters>({
-    rating: null,
-    propertyViews: [],
-    guestRatings: [],
-    minPrice: 0,
-    maxPrice: 500,
-    roomTypes: [],
-  });
-
-  const [appliedFilters, setAppliedFilters] = useState<Filters>(filters);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-
-  /* ---------------- HANDLERS ---------------- */
+  /* ---------------- FILTER HANDLERS ---------------- */
   const handleCheckboxChange = (category: keyof Filters, value: string) => {
     setFilters((prev) => {
       const list = prev[category] as string[];
       return {
         ...prev,
-        [category]: list.includes(value)
-          ? list.filter((v) => v !== value)
-          : [...list, value],
+        [category]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value],
       };
     });
   };
@@ -98,6 +150,8 @@ export default function HotelFilter() {
     setFilters(reset);
     setAppliedFilters(reset);
     setGuestDetails({ room: 0, adult: 0, children: 0 });
+    setArrival(undefined);
+    setDeparture(undefined);
   };
 
   const handleApply = () => {
@@ -107,89 +161,161 @@ export default function HotelFilter() {
 
   /* ---------------- FILTER LOGIC ---------------- */
   const filteredHotels = hotelsData.filter((hotel) => {
-    if (appliedFilters.rating !== null && hotel.rating < appliedFilters.rating)
-      return false;
-
-    if (
-      hotel.price < appliedFilters.minPrice ||
-      hotel.price > appliedFilters.maxPrice
-    )
-      return false;
-
+    if (appliedFilters.rating !== null && hotel.rating < appliedFilters.rating) return false;
+    if (hotel.price < appliedFilters.minPrice || hotel.price > appliedFilters.maxPrice) return false;
     return true;
   });
 
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className={lang === "ar" ? "font-arabic" : ""}>
-      {/* ---------------- BANNER ---------------- */}
+      {/* ---------------- BANNER-STYLE SEARCH ---------------- */}
       <div className="mb-6">
         <div className={`flex flex-col md:flex-row gap-2 justify-center items-stretch rounded-lg p-2 shadow-md text-black ${lang === "ar" ? "text-right" : "text-left"}`}>
+
           {/* Arrival Date */}
-          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12">
-            <input
-              type="date"
-              value={arrival}
-              onChange={(e) => setArrival(e.target.value)}
-              className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
-            />
-            <label className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}>
-              {lang === "ar" ? "تاريخ الوصول" : "Arrival Date"}
-            </label>
+          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12" ref={arrivalRef}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowArrivalCalendar(!showArrivalCalendar); setShowDepartureCalendar(false); updatePositions(); }}
+              className="w-full h-full text-left px-3 pt-5 pb-1 focus:outline-none"
+            >
+              <label className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}>
+                {lang === "ar" ? "تاريخ الوصول" : "Arrival Date"}
+              </label>
+              <span className={`text-sm ${lang === "ar" ? "font-arabic text-right block" : ""}`}>
+                {arrival ? format(arrival, lang === "ar" ? "yyyy/MM/dd" : "dd/MM/yyyy") : lang === "ar" ? "---- / -- / --" : "-- / -- / ----"}
+              </span>
+            </button>
+
+            {showArrivalCalendar &&
+              createPortal(
+                <div
+                  className="absolute z-50"
+                  style={{ top: arrivalPos.top, left: arrivalPos.left, transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)", transformOrigin: "top left" }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <ArabicCalendar
+                    lang={lang}
+                    selected={arrival}
+                    showClearButton
+                    onSelect={(date) => { setArrival(date); setShowArrivalCalendar(false); if (date) setShowDepartureCalendar(true); }}
+                  />
+                </div>,
+                document.body
+              )}
           </div>
 
           {/* Departure Date */}
-          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12">
-            <input
-              type="date"
-              value={departure}
-              onChange={(e) => setDeparture(e.target.value)}
-              className="peer px-3 pt-5 pb-1 w-full rounded focus:outline-none"
-            />
-            <label className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}>
-              {lang === "ar" ? "تاريخ المغادرة" : "Departure Date"}
-            </label>
+          <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12" ref={departureRef}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowDepartureCalendar(!showDepartureCalendar); setShowArrivalCalendar(false); updatePositions(); }}
+              className="w-full h-full text-left px-3 pt-5 pb-1 focus:outline-none"
+            >
+              <label className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}>
+                {lang === "ar" ? "تاريخ المغادرة" : "Departure Date"}
+              </label>
+              <span className={`text-sm ${lang === "ar" ? "font-arabic text-right block" : ""}`}>
+                {departure ? format(departure, lang === "ar" ? "yyyy/MM/dd" : "dd/MM/yyyy") : lang === "ar" ? "---- / -- / --" : "-- / -- / ----"}
+              </span>
+            </button>
+
+            {showDepartureCalendar &&
+              createPortal(
+                <div
+                  className="absolute z-50"
+                  style={{ top: departurePos.top, left: departurePos.left, transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)", transformOrigin: "top left" }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <ArabicCalendar
+                    lang={lang}
+                    selected={departure}
+                    disabled={(date) => arrival ? date < arrival : date < new Date()}
+                    showClearButton
+                    onSelect={(date) => { setDeparture(date); setShowDepartureCalendar(false); }}
+                  />
+                </div>,
+                document.body
+              )}
           </div>
 
-          {/* Guests & Rooms */}
+          {/* Guests */}
           <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12" ref={popupRef}>
             <button
               type="button"
               onClick={toggleGuestMenu}
-              className={`peer w-full px-3 pt-5 pb-1 rounded focus:outline-none ${lang === "ar" ? "text-right" : "text-left"}`}
+              className={`w-full px-3 pt-5 pb-1 focus:outline-none ${lang === "ar" ? "text-right" : "text-left"}`}
             >
               <label className={`absolute ${lang === "ar" ? "right-3" : "left-3"} top-2.5 text-gray-500 text-xs`}>
                 {lang === "ar" ? "الضيوف والغرف" : "Guests & Rooms"}
               </label>
               <div className={`text-black font-medium text-sm mt-1 truncate ${lang === "ar" ? "font-arabic text-right" : ""}`}>
-                {guestDetails.room} {lang === "ar" ? (guestDetails.room === 1 ? "غرفة" : "غرف") : (guestDetails.room === 1 ? "Room" : "Rooms")}, {guestDetails.adult} {lang === "ar" ? (guestDetails.adult === 1 ? "بالغ" : "بالغين") : (guestDetails.adult === 1 ? "Adult" : "Adults")}, {guestDetails.children} {lang === "ar" ? (guestDetails.children === 1 ? "طفل" : "أطفال") : (guestDetails.children === 1 ? "Child" : "Children")}
+                {guestDetails.room} {lang === "ar" ? (guestDetails.room === 1 ? "غرفة" : "غرف") : (guestDetails.room === 1 ? "Room" : "Rooms")},
+                {guestDetails.adult} {lang === "ar" ? (guestDetails.adult === 1 ? "بالغ" : "بالغين") : (guestDetails.adult === 1 ? "Adult" : "Adults")},
+                {guestDetails.children} {lang === "ar" ? (guestDetails.children === 1 ? "طفل" : "أطفال") : (guestDetails.children === 1 ? "Child" : "Children")}
               </div>
             </button>
 
+            {/* Popup */}
             {showGuestPopup &&
               createPortal(
                 <div
                   ref={popupContentRef}
+                  onMouseDown={(e) => e.stopPropagation()} // Prevent closing when clicking inside
                   className={`absolute mt-2 bg-white shadow-lg rounded-md w-[80%] lg:w-fit p-2 text-xs z-20 ${lang === "ar" ? "font-arabic text-right rtl" : "text-left"}`}
                   style={{ top: menuTopPosition, left: menuLeftPosition }}
                 >
                   {["room", "adult", "children"].map((key) => (
-                    <div key={key} className={`flex items-center justify-between mb-1.5 last:mb-0 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
+                    <div
+                      key={key}
+                      className={`flex items-center justify-between mb-1.5 last:mb-0 ${lang === "ar" ? "flex-row-reverse" : ""}`}
+                    >
                       <span className="text-gray-700 font-medium">
                         {key === "room" ? (lang === "ar" ? "غرفة" : "Room") : key === "adult" ? (lang === "ar" ? "بالغ" : "Adult") : (lang === "ar" ? "أطفال" : "Child")}
                       </span>
                       <div className={`flex items-center ${lang === "ar" ? "flex-row-reverse space-x-reverse space-x-1" : "space-x-1"}`}>
-                        <button type="button" onClick={() => changeDetail(key as keyof GuestDetails, -1)} className="px-1.5 py-0.5 bg-gray-200 rounded hover:bg-gray-300">-</button>
+                        <button
+                          type="button"
+                          onClick={() => changeDetail(key as keyof GuestDetails, -1)}
+                          className="px-1.5 py-0.5 bg-gray-200 rounded hover:bg-gray-300"
+                        >
+                          -
+                        </button>
                         <span className="w-4 text-center">{guestDetails[key as keyof GuestDetails]}</span>
-                        <button type="button" onClick={() => changeDetail(key as keyof GuestDetails, 1)} className="px-1.5 py-0.5 bg-gray-200 rounded hover:bg-gray-300">+</button>
+                        <button
+                          type="button"
+                          onClick={() => changeDetail(key as keyof GuestDetails, 1)}
+                          className="px-1.5 py-0.5 bg-gray-200 rounded hover:bg-gray-300"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
                   ))}
 
                   <div className={`flex justify-between mt-2 ${lang === "ar" ? "flex-row-reverse space-x-reverse space-x-2" : "space-x-2"}`}>
-                    <button type="button" onClick={() => setGuestDetails({ room: 0, adult: 0, children: 0 })} className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs font-medium">{lang === "ar" ? "إعادة تعيين" : "Reset"}</button>
+                    <button
+                      type="button"
+                      onClick={() => setGuestDetails({ room: 0, adult: 0, children: 0 })}
+                      className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs font-medium"
+                    >
+                      {lang === "ar" ? "إعادة تعيين" : "Reset"}
+                    </button>
                     <div className={`flex ${lang === "ar" ? "flex-row-reverse space-x-reverse space-x-2" : "space-x-2"}`}>
-                      <button type="button" onClick={() => setShowGuestPopup(false)} className="px-3 py-1 border rounded hover:bg-gray-200 text-xs font-medium">{lang === "ar" ? "إلغاء" : "Cancel"}</button>
-                      <button type="button" onClick={() => setShowGuestPopup(false)} className="px-3 py-1 bg-[#003243] text-white rounded text-xs font-medium">{lang === "ar" ? "تأكيد" : "Confirm"}</button>
+                      <button
+                        type="button"
+                        onClick={() => setShowGuestPopup(false)}
+                        className="px-3 py-1 border rounded hover:bg-gray-200 text-xs font-medium"
+                      >
+                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowGuestPopup(false)}
+                        className="px-3 py-1 bg-[#003243] text-white rounded text-xs font-medium"
+                      >
+                        {lang === "ar" ? "تأكيد" : "Confirm"}
+                      </button>
                     </div>
                   </div>
                 </div>,
@@ -198,14 +324,14 @@ export default function HotelFilter() {
           </div>
 
           {/* Search Button */}
-          <div className={`flex flex-col justify-end ${lang === "ar" ? "items-start" : "items-end"}`}>
+          <div className={`flex flex-col justify-end ${lang === "ar" ? "items-start" : "items-end"} mt-2 md:mt-0`}>
             <button
-              onClick={handleSearch}
-              className={`bg-[#EF4050] hover:bg-[#d93848] text-white px-10 py-1.5 mb-5 lg:mb-0 rounded transition w-full md:w-auto h-full text-ms font-medium ${lang === "ar" ? "font-arabic" : ""}`}
+              className={`bg-[#EF4050] hover:bg-[#d93848] text-white px-10 h-15 py-1.5 rounded transition w-full md:w-auto text-ms font-medium ${lang === "ar" ? "font-arabic" : ""}`}
             >
               {lang === "ar" ? "ابحث عن الفنادق" : "Search Hotels"}
             </button>
           </div>
+
         </div>
       </div>
 
