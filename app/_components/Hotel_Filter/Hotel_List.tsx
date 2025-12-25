@@ -1,6 +1,7 @@
 "use client";
 
 import { useContext } from "react";
+import { useRouter } from "next/navigation";
 import { LangContext } from "@/app/lang-provider";
 import { MapPinIcon } from "lucide-react"; // optional icon library, make sure lucide-react is installed
 
@@ -30,6 +31,7 @@ function toArabicNumber(num: number) {
 
 export default function HotelList({ hotels }: Props) {
   const { lang } = useContext(LangContext);
+  const router = useRouter();
 
   if (hotels.length === 0)
     return (
@@ -87,7 +89,9 @@ export default function HotelList({ hotels }: Props) {
             </div>
 
             {/* Button */}
-            <button className="w-full bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded-lg hover:opacity-90 transition">
+            <button
+            onClick={() => router.push("/RoomChoices")}
+            className="w-full bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded-lg hover:opacity-90 transition">
               {lang === "ar" ? "اعرض غرفتك" : "See your room"}
             </button>
           </div>
