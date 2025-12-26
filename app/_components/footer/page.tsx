@@ -215,10 +215,10 @@ export default function Footer() {
             ${isArabic ? "flex-row-reverse space-x-reverse space-x-6" : "space-x-4"}
           `}
         >
-          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><FaLinkedin size={24} /></a>
-          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><FaFacebook size={24} /></a>
-          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><SiX size={24} /></a>
-          <a href="#" className="text-white border border-gray-200 p-3 rounded-full"><FaInstagram size={24} /></a>
+          <a href="https://www.linkedin.com/company/al-refaa-al-omrani-%D8%B4%D8%B1%D9%83%D8%A9-%D8%A7%D9%84%D8%B1%D9%81%D8%A7%D8%B9-%D8%A7%D9%84%D8%B9%D9%85%D8%B1%D8%A7%D9%86%D9%8A/" className="text-white border border-gray-200 p-3 rounded-full"><FaLinkedin size={24} /></a>
+          <a href="https://www.facebook.com/alrefaaforhotels" className="text-white border border-gray-200 p-3 rounded-full"><FaFacebook size={24} /></a>
+          <a href="https://x.com/alrefaa_alomran" className="text-white border border-gray-200 p-3 rounded-full"><SiX size={24} /></a>
+          <a href="https://www.instagram.com/alrefaamotels/" className="text-white border border-gray-200 p-3 rounded-full"><FaInstagram size={24} /></a>
           <a href="https://wa.me/1234567890" target="_blank" rel="noopener noreferrer" className="text-white border border-gray-200 p-3 rounded-full"><FaWhatsapp size={24} /></a>
         </div>
       </div>

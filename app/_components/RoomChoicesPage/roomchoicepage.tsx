@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useContext } from "react";
+import { useRouter } from "next/navigation";
 import { FaBed, FaUser, FaChild, FaChevronDown } from "react-icons/fa";
 import { LangContext } from "@/app/lang-provider";
 
@@ -50,6 +51,7 @@ const roomsData = [
 export default function RoomChoicesPage() {
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
+  const router = useRouter();
 
   const [openRoom, setOpenRoom] = useState<number | null>(null);
   const [roomCounts, setRoomCounts] = useState<{ [key: number]: number }>(
@@ -71,9 +73,8 @@ export default function RoomChoicesPage() {
 
   return (
     <div
-      className={`max-w-7xl mx-auto mt-20 px-4 py-6 ${
-        isArabic ? "font-arabic" : ""
-      }`}
+      className={`max-w-7xl mx-auto mt-20 px-4 py-6 ${isArabic ? "font-arabic" : ""
+        }`}
       dir={isArabic ? "rtl" : "ltr"}
     >
       {/* Step Bar */}
@@ -233,9 +234,17 @@ export default function RoomChoicesPage() {
                         ? "اختر واحدة أخرى"
                         : "Choose another one"}
                     </button>
-                    <button className="flex-1 bg-linear-to-r from-[#1F8593] to-[#052E39] text-white rounded py-2 text-ms">
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/Guest-Detail?roomId=${room.id}&count=${roomCounts[room.id]}`
+                        )
+                      }
+                      className="flex-1 bg-linear-to-r from-[#1F8593] to-[#052E39] text-white rounded py-2 text-ms"
+                    >
                       {isArabic ? "حجز الغرفة" : "Book a Room"}
                     </button>
+
                   </div>
                 </div>
               </div>
