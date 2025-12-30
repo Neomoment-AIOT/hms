@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useContext } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useContext, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { FaStar, FaDownload, FaMapMarkerAlt, FaEnvelope } from "react-icons/fa";
+import { format, addDays } from "date-fns";
 import { LangContext } from "@/app/lang-provider";
 
 const countries = [
@@ -45,12 +46,24 @@ const Riyal = () => <img src="/Riyal_Black.png" alt="Riyal" className="inline w-
 
 export default function GuestDetailsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
   const roomId = Number(searchParams.get("roomId"));
   const count = Number(searchParams.get("count")) || 1;
 
   const selectedRoom = roomsData.find((r) => r.id === roomId);
+
+  const [checkIn, setCheckIn] = useState<Date>(new Date());
+  const [checkOut, setCheckOut] = useState<Date>(addDays(new Date(), 1));
+
+  useEffect(() => {
+    const inDate = searchParams.get("checkIn");
+    const outDate = searchParams.get("checkOut");
+
+    if (inDate) setCheckIn(new Date(inDate + "T00:00:00"));
+    if (outDate) setCheckOut(new Date(outDate + "T00:00:00"));
+  }, [searchParams]);
 
   const [meals, setMeals] = useState({
     breakfast: false,
@@ -71,13 +84,29 @@ export default function GuestDetailsPage() {
   const services = 300;
   const grandTotal = roomTotal + services + mealsTotal;
 
+  const handleContinueToPayment = () => {
+  const bookingData = {
+    roomName: selectedRoom?.name,
+    roomCount: count,
+    checkIn: format(checkIn, "yyyy-MM-dd"),
+    checkOut: format(checkOut, "yyyy-MM-dd"),
+    meals,
+    services,
+    totalPrice: roomTotal,
+  };
+
+  sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
+
+  router.push("/PayementSuccess");
+};
+
   return (
     <div className={`max-w-7xl mx-auto mt-20 px-4 py-6 ${isArabic ? "font-arabic" : ""}`} dir={isArabic ? "rtl" : "ltr"}>
       {/* STEP BAR */}
       <div className="bg-white rounded-lg shadow p-4 mb-8">
         <p className="text-sm text-gray-500">{isArabic ? "عملية الحجز من 3 خطوات" : "Your 3 steps process to book a room"}</p>
         <h2 className="font-semibold">{isArabic ? "الخطوة #02" : "Step #02"}</h2>
-        
+
         <div className="mt-2 h-2 bg-gray-200 rounded-full">
           <div className="h-2 bg-teal-600 rounded-full w-2/3" />
         </div>
@@ -179,7 +208,7 @@ export default function GuestDetailsPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-start mb-4">
             <h3 className="font-semibold">{isArabic ? "ملخص الحجز" : "Booking Summary"}</h3>
-            <span className="text-xs text-gray-500">2025-03-18 • 2025-03-21</span>
+            <span className="text-xs text-gray-500">{format(checkIn, isArabic ? "yyyy/MM/dd" : "dd/MM/yyyy")} • {format(checkOut, isArabic ? "yyyy/MM/dd" : "dd/MM/yyyy")}</span>
           </div>
 
           {/* HOTEL CARD */}
@@ -198,7 +227,7 @@ export default function GuestDetailsPage() {
             </div>
 
             <button className="border px-2 py-1 rounded text-sm flex items-center gap-1">
-              <FaDownload /> PDF
+              <FaDownload /> Download PDF
             </button>
           </div>
 
@@ -242,28 +271,17 @@ export default function GuestDetailsPage() {
           <div className="mt-4">
             <h4 className="font-semibold mb-2">{isArabic ? "تفصيل السعر" : "Price Breakdown"}</h4>
             <div className="space-y-2 text-sm">
+
               <div className="flex justify-between">
-                <span>{isArabic ? "عناصر النشر" : "Posting Items"}</span>
-                <span><Riyal /> 0.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{isArabic ? "الخدمات" : "Services"}</span>
+                <span>{isArabic ? "خدمات الوجبات" : "Meal Services"}</span>
+
                 <span className="flex items-center gap-1">
-                  <Riyal /> <span>{services}</span>
+                  <img src="/Riyal_Black.png" alt="Riyal" className="w-4 h-4" />
+                  <span>
+                    {mealsTotal === 0 ? "0.00" : mealsTotal}
+                  </span>
                 </span>
               </div>
-
-              <div className="flex justify-between">
-  <span>{isArabic ? "خدمات الوجبات" : "Meal Services"}</span>
-
-  <span className="flex items-center gap-1">
-    <img src="/Riyal_Black.png" alt="Riyal" className="w-4 h-4" />
-    <span>
-      {mealsTotal === 0 ? "0.00" : mealsTotal}
-    </span>
-  </span>
-</div>
-
 
               <div className="flex justify-between">
                 <span>{isArabic ? `الغرفة ${count} ${selectedRoom?.name}` : `Room ${count} ${selectedRoom?.name}`}</span>
@@ -286,7 +304,11 @@ export default function GuestDetailsPage() {
                 </span>
               </div>
             </div>
-            <button className="w-full mt-6 bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded">
+            <button
+  onClick={handleContinueToPayment}
+  className="w-full mt-6 bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded"
+>
+
               {isArabic ? "المتابعة للدفع" : "Continue to payment"}
             </button>
           </div>

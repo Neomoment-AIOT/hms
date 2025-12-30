@@ -43,7 +43,7 @@ export default function SignIn({
     }
 
     // ✅ SUCCESS - add default name
-    onSuccess?.({ name: "Aamir", email }); 
+    onSuccess?.({ name: "Admin", email }); 
     onClose();
   };
 
@@ -79,6 +79,7 @@ export default function SignIn({
               type="email"
               className="w-full border rounded-lg px-3 py-2"
               value={email}
+              placeholder={isArabic ? "أدخل بريدك الإلكتروني" : "Enter your email"}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
@@ -91,6 +92,7 @@ export default function SignIn({
               type={showPassword ? "text" : "password"}
               className="w-full border rounded-lg px-3 py-2 pr-10"
               value={password}
+              placeholder={isArabic ? "أدخل كلمة المرور" : "Enter your password"}
               onChange={(e) => setPassword(e.target.value)}
               required
             />

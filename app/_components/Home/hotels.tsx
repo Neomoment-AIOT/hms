@@ -43,6 +43,16 @@ const Hotels = () => {
       <h2 className={`text-3xl font-bold mb-10 ${isArabic ? "font-arabic text-right" : ""}`}>
         {isArabic ? "عروض خاصة منّا لكم" : "Special offers from us to you"}
       </h2>
+      {/* Design */}
+      <div className="flex items-center justify-center w-full mb-10">
+        <div className="grow h-0.5 bg-linear-to-r from-[#1F8593] to-[#052E39]"></div>
+        <div className="flex items-center mx-4 gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#1F8593]"></div>
+          <div className="w-5 h-5 rounded-full bg-[#1F8593]"></div>
+          <div className="w-3 h-3 rounded-full bg-[#1F8593]"></div>
+        </div>
+        <div className="grow h-0.5 bg-linear-to-l from-[#1F8593] to-[#052E39]"></div>
+      </div>
 
       <div
         className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 ${isArabic ? "direction-rtl" : ""}`}

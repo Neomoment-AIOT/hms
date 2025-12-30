@@ -2,7 +2,7 @@
 
 import { useState, useContext } from "react";
 import { useRouter } from "next/navigation";
-import { FaBed, FaUser, FaChild, FaChevronDown } from "react-icons/fa";
+import { FaBed, FaHome, FaUser, FaChild, FaChevronDown } from "react-icons/fa";
 import { LangContext } from "@/app/lang-provider";
 
 const roomsData = [
@@ -146,7 +146,7 @@ export default function RoomChoicesPage() {
                 {/* Beds / Adults / Children */}
                 <div className="flex gap-4 text-ms space-x-7 justify-center text-gray-600 mt-3">
                   <span className="flex items-center gap-1">
-                    <FaBed /> {isArabic ? "الأسرة" : "Beds"} {room.beds}
+                    <FaHome /> {isArabic ? "غرفة" : "Room"} {room.beds}
                   </span>
                   <span className="flex items-center gap-1">
                     <FaUser /> {isArabic ? "البالغون" : "Adults"} {room.adults}

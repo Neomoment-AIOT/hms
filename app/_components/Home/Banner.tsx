@@ -8,7 +8,6 @@ import {
   useState as useReactState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { FaMapMarkerAlt } from "react-icons/fa"
 import { createPortal } from "react-dom";
 import { LangContext } from "@/app/lang-provider";
 import ArabicCalendar from "../ArabicCalendar";
@@ -24,8 +23,28 @@ export default function Banner() {
   const { lang } = useContext(LangContext);
   const router = useRouter();
 
-  const [arrivalDate, setArrivalDate] = useState<Date | undefined>(undefined);
-  const [departureDate, setDepartureDate] = useState<Date | undefined>(undefined);
+  const getToday = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const getTomorrow = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const toDateParam = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const [arrivalDate, setArrivalDate] = useState<Date>(getToday());
+  const [departureDate, setDepartureDate] = useState<Date>(getTomorrow());
 
   const [showArrivalCalendar, setShowArrivalCalendar] = useState(false);
   const [showDepartureCalendar, setShowDepartureCalendar] = useState(false);
@@ -34,8 +53,8 @@ export default function Banner() {
   const [departurePos, setDeparturePos] = useState({ top: 0, left: 0 });
   const [guestPos, setGuestPos] = useState({ top: 0, left: 0 });
   const [guestDetails, setGuestDetails] = useState<GuestDetails>({
-    room: 0,
-    adult: 0,
+    room: 1,
+    adult: 1,
     children: 0,
   });
 
@@ -51,7 +70,11 @@ export default function Banner() {
   const popupContentRef = useRef<HTMLDivElement | null>(null);
 
   const handleSearch = () => {
-    router.push("/Hotel_Filter");
+    const checkIn = toDateParam(arrivalDate);
+    const checkOut = toDateParam(departureDate);
+    router.push(
+      `/Hotel_Filter?checkIn=${checkIn}&checkOut=${checkOut}&room=${guestDetails.room}&adult=${guestDetails.adult}&children=${guestDetails.children}`
+    );
   };
 
   const updatePositions = () => {
@@ -308,10 +331,21 @@ export default function Banner() {
                     selected={arrivalDate}
                     showClearButton={true}
                     onSelect={(date: Date | undefined) => {
+                      if (!date) return;
+
                       setArrivalDate(date);
+
+
+                      if (departureDate <= date) {
+                        const nextDay = new Date(date);
+                        nextDay.setDate(nextDay.getDate() + 1);
+                        setDepartureDate(nextDay);
+                      }
+
                       setShowArrivalCalendar(false);
-                      if (date) setShowDepartureCalendar(true);
+                      setShowDepartureCalendar(true);
                     }}
+
                   />
                 </div>,
                 document.body
@@ -335,9 +369,16 @@ export default function Banner() {
                     showClearButton={true}
                     disabled={(date) => arrivalDate ? date < arrivalDate : date < new Date()}
                     onSelect={(date: Date | undefined) => {
+                      if (!date) {
+                        setDepartureDate(getTomorrow());
+                        setShowDepartureCalendar(false);
+                        return;
+                      }
+
                       setDepartureDate(date);
                       setShowDepartureCalendar(false);
                     }}
+
                   />
                 </div>,
                 document.body
@@ -402,7 +443,7 @@ export default function Banner() {
                       <button
                         type="button"
                         onClick={() =>
-                          setGuestDetails({ room: 0, adult: 0, children: 0 })
+                          setGuestDetails({ room: 1, adult: 1, children: 0 })
                         }
                         className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs font-medium"
                       >

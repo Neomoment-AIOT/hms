@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useContext, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import HotelList from "./Hotel_List";
 import { hotelsData } from "./Hotel_Data";
@@ -26,6 +27,29 @@ type GuestDetails = {
 
 export default function HotelFilter() {
   const { lang } = useContext(LangContext);
+  const searchParams = useSearchParams();
+
+useEffect(() => {
+  const checkIn = searchParams.get("checkIn");
+  const checkOut = searchParams.get("checkOut");
+
+  if (checkIn) {
+    setArrival(new Date(checkIn + "T00:00:00"));
+  }
+
+  if (checkOut) {
+    setDeparture(new Date(checkOut + "T00:00:00"));
+  }
+
+  setGuestDetails({
+  room: Number(searchParams.get("room") ?? 1),
+  adult: Number(searchParams.get("adult") ?? 1),
+  children: Number(searchParams.get("children") ?? 0),
+});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+
 
   /* ---------------- DATE & GUEST STATE ---------------- */
   const [arrival, setArrival] = useState<Date | undefined>(undefined);
@@ -36,8 +60,8 @@ export default function HotelFilter() {
   const [departurePos, setDeparturePos] = useState({ top: 0, left: 0 });
 
   const [guestDetails, setGuestDetails] = useState<GuestDetails>({
-    room: 0,
-    adult: 0,
+    room: 1,
+    adult: 1,
     children: 0,
   });
   const [showGuestPopup, setShowGuestPopup] = useState(false);
@@ -149,7 +173,7 @@ export default function HotelFilter() {
     };
     setFilters(reset);
     setAppliedFilters(reset);
-    setGuestDetails({ room: 0, adult: 0, children: 0 });
+    setGuestDetails({ room: 1, adult: 1, children: 0 });
     setArrival(undefined);
     setDeparture(undefined);
   };
@@ -160,11 +184,28 @@ export default function HotelFilter() {
   };
 
   /* ---------------- FILTER LOGIC ---------------- */
-  const filteredHotels = hotelsData.filter((hotel) => {
-    if (appliedFilters.rating !== null && hotel.rating < appliedFilters.rating) return false;
-    if (hotel.price < appliedFilters.minPrice || hotel.price > appliedFilters.maxPrice) return false;
-    return true;
-  });
+const filteredHotels = hotelsData.filter((hotel) => {
+  // Filter by rating
+  if (appliedFilters.rating !== null && hotel.rating < appliedFilters.rating) return false;
+
+  // Filter by price
+  if (hotel.price < appliedFilters.minPrice || hotel.price > appliedFilters.maxPrice) return false;
+
+  // Filter by property views
+  if (appliedFilters.propertyViews.length > 0 && !appliedFilters.propertyViews.includes(hotel.propertyView))
+    return false;
+
+  // Filter by guest ratings
+  if (appliedFilters.guestRatings.length > 0 && !appliedFilters.guestRatings.includes(hotel.guestRating))
+    return false;
+
+  // Filter by room types
+  if (appliedFilters.roomTypes.length > 0 && !hotel.roomTypes.some((room) => appliedFilters.roomTypes.includes(room)))
+    return false;
+
+  return true;
+});
+
 
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className={lang === "ar" ? "font-arabic" : ""}>
@@ -198,7 +239,15 @@ export default function HotelFilter() {
                     lang={lang}
                     selected={arrival}
                     showClearButton
-                    onSelect={(date) => { setArrival(date); setShowArrivalCalendar(false); if (date) setShowDepartureCalendar(true); }}
+                    onSelect={(date) => {
+  setArrival(date);
+  if (departure && date && date >= departure) {
+    setDeparture(undefined);
+  }
+  setShowArrivalCalendar(false);
+  if (date) setShowDepartureCalendar(true);
+}}
+
                   />
                 </div>,
                 document.body
@@ -232,7 +281,14 @@ export default function HotelFilter() {
                     selected={departure}
                     disabled={(date) => arrival ? date < arrival : date < new Date()}
                     showClearButton
-                    onSelect={(date) => { setDeparture(date); setShowDepartureCalendar(false); }}
+                    onSelect={(date) => {
+  if (!date) return;
+
+  setDeparture(date);
+  setShowDepartureCalendar(false);
+}}
+
+
                   />
                 </div>,
                 document.body
@@ -562,48 +618,41 @@ function FilterContent({
         </h3>
 
         {[
-          { en: "Deluxe Room", ar: "غرفة ديلوكس" },
-          { en: "Double Room", ar: "غرفة مزدوجة" },
-          { en: "Quadruple Room", ar: "غرفة رباعية" },
-          { en: "Family Suite", ar: "جناح عائلي" },
-          { en: "Junior Suite", ar: "جناح صغير" },
-          { en: "Standard Room", ar: "غرفة قياسية" },
-          { en: "Triple Room", ar: "غرفة ثلاثية" },
-          { en: "Super Deluxe Room", ar: "غرفة سوبر ديلوكس" },
-        ].map((room) => (
-          <label
-            key={room.en}
-            className={`flex items-center justify-between w-full cursor-pointer ${lang === "ar" ? "flex-row-reverse text-right" : ""
-              }`}
-          >
-            {lang === "ar" ? (
-              <>
-                <input
-                  type="checkbox"
-                  checked={filters.roomTypes.includes(room.en)}
-                  onChange={() =>
-                    handleCheckboxChange("roomTypes", room.en)
-                  }
-                />
-                <span className="flex-1 mr-3">{room.ar}</span>
-              </>
-            ) : (
-              <>
-                <span className="flex-1">{room.en}</span>
-                <input
-                  type="checkbox"
-                  checked={filters.roomTypes.includes(room.en)}
-                  onChange={() =>
-                    handleCheckboxChange("roomTypes", room.en)
-                  }
-                />
-              </>
-            )}
-          </label>
-        ))}
+  { en: "Deluxe Room", ar: "غرفة ديلوكس", value: "deluxe" },
+  { en: "Double Room", ar: "غرفة مزدوجة", value: "double" },
+  { en: "Quadruple Room", ar: "غرفة رباعية", value: "quadruple" },
+  { en: "Family Suite", ar: "جناح عائلي", value: "familySuite" },
+  { en: "Junior Suite", ar: "جناح صغير", value: "juniorSuite" },
+  { en: "Standard Room", ar: "غرفة قياسية", value: "standard" },
+  { en: "Triple Room", ar: "غرفة ثلاثية", value: "triple" },
+  { en: "Super Deluxe Room", ar: "غرفة سوبر ديلوكس", value: "superDeluxe" },
+  { en: "Hexagonal Room", ar: "غرفة سداسية", value: "hexagonal" },
+  { en: "Senior Suite", ar: "جناح كبير", value: "seniorSuite" },
+].map((room) => (
+  <label key={room.value} className={`flex items-center justify-between w-full cursor-pointer ${lang === "ar" ? "flex-row-reverse text-right" : ""}`}>
+    {lang === "ar" ? (
+      <>
+        <input
+          type="checkbox"
+          checked={filters.roomTypes.includes(room.value)}
+          onChange={() => handleCheckboxChange("roomTypes", room.value)}
+        />
+        <span className="flex-1 mr-3">{room.ar}</span>
+      </>
+    ) : (
+      <>
+        <span className="flex-1">{room.en}</span>
+        <input
+          type="checkbox"
+          checked={filters.roomTypes.includes(room.value)}
+          onChange={() => handleCheckboxChange("roomTypes", room.value)}
+        />
+      </>
+    )}
+  </label>
+))}
+
       </div>
     </div>
   );
 }
-
-

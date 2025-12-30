@@ -107,10 +107,10 @@ export default function ArabicCalendar({
       {showClearButton && (
         <div className={`flex mt-3 ${lang === "ar" ? "justify-start" : "justify-end"}`}>
           <button
-            className="py-1 px-4 rounded bg-gray-200 font-medium hover:bg-gray-300 transition"
+            className="py-1 px-4 rounded font-arabic bg-gray-200 font-medium hover:bg-gray-300 transition"
             onClick={handleClear}
           >
-            {lang === "ar" ? "مسح" : "Clear"}
+            {lang === "ar" ? "إلغاء " : "Clear"}
           </button>
         </div>
       )}
