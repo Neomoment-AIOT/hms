@@ -331,10 +331,15 @@ export default function Banner() {
                     selected={arrivalDate}
                     showClearButton={true}
                     onSelect={(date: Date | undefined) => {
-                      if (!date) return;
+                      if (!date) {
+                        const today = getToday();
+                        setArrivalDate(today);
+                        setDepartureDate(getTomorrow());
 
+                        setShowArrivalCalendar(false);
+                        return;
+                      }
                       setArrivalDate(date);
-
 
                       if (departureDate <= date) {
                         const nextDay = new Date(date);

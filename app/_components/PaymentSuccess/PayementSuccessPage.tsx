@@ -190,7 +190,7 @@ export default function PaymentSuccessPage() {
           <div className={`flex gap-6 mt-10 ${isArabic ? "flex-row-reverse" : ""}`}>
             <button
               className="flex-1 bg-teal-700 text-white py-4 rounded-xl text-lg"
-              onClick={() => router.push("/Guest-Detail")}
+              onClick={() => router.push("/my-bookings")}
             >
               {isArabic ? "الذهاب إلى الحجز" : "Go to Booking"}
             </button>

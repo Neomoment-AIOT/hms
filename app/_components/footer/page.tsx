@@ -219,7 +219,7 @@ export default function Footer() {
           <a href="https://www.facebook.com/alrefaaforhotels" className="text-white border border-gray-200 p-3 rounded-full"><FaFacebook size={24} /></a>
           <a href="https://x.com/alrefaa_alomran" className="text-white border border-gray-200 p-3 rounded-full"><SiX size={24} /></a>
           <a href="https://www.instagram.com/alrefaamotels/" className="text-white border border-gray-200 p-3 rounded-full"><FaInstagram size={24} /></a>
-          <a href="https://wa.me/1234567890" target="_blank" rel="noopener noreferrer" className="text-white border border-gray-200 p-3 rounded-full"><FaWhatsapp size={24} /></a>
+          <a href="https://wa.me/966920010417" target="_blank" rel="noopener noreferrer" className="text-white border border-gray-200 p-3 rounded-full"><FaWhatsapp size={24} /></a>
         </div>
       </div>
     </footer>

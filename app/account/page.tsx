@@ -45,7 +45,6 @@ export default function AccountPage() {
   const [currentLocation, setCurrentLocation] = useState("");
   const [bio, setBio] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [showBookings, setShowBookings] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -82,40 +81,9 @@ export default function AccountPage() {
           <div className="flex flex-col md:block justify-between">
             <h2 className="text-lg font-semibold mb-6">{isArabic ? "الإعدادات" : "Setting"}</h2>
             <ul className="space-y-4">
-  {/* Profile */}
-  <li className="font-semibold text-teal-600 cursor-pointer">
-    {isArabic ? "الملف الشخصي" : "Profile"}
-  </li>
-
-  {/* My Booking */}
-  <li
-    className="cursor-pointer font-medium"
-    onClick={() => setShowBookings(!showBookings)}
-  >
-    {isArabic ? "حجوزاتي" : "My Booking"}
-  </li>
-
-  {/* Booking Status Buttons */}
-  {showBookings && (
-    <ul className="ml-4 space-y-2 text-sm">
-      <li className="cursor-pointer text-green-600">
-        {isArabic ? "مؤكد" : "Confirmed"}
-      </li>
-      <li className="cursor-pointer text-yellow-600">
-        {isArabic ? "غير مؤكد" : "Not Confirmed"}
-      </li>
-      <li className="cursor-pointer text-red-600">
-        {isArabic ? "ملغى" : "Cancelled"}
-      </li>
-    </ul>
-  )}
-
-  {/* Logout */}
-  <li className="cursor-pointer" onClick={handleLogout}>
-    {isArabic ? "تسجيل الخروج" : "Logout"}
-  </li>
-</ul>
-
+              <li className="font-semibold text-teal-600 cursor-pointer">{isArabic ? "الملف الشخصي" : "Profile"}</li>
+              <li className="cursor-pointer" onClick={handleLogout}>{isArabic ? "تسجيل الخروج" : "Logout"}</li>
+            </ul>
             <Link href="/" className="mt-6 inline-block bg-teal-700 text-white px-4 py-2 rounded">
               {isArabic ? "العودة للصفحة الرئيسية" : "Back to Home"}
             </Link>
@@ -131,18 +99,18 @@ export default function AccountPage() {
             <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
               <div className="flex-1">
                 <label className="block text-sm font-medium">{isArabic ? "الاسم الأول" : "First Name"}</label>
-                <input type="text" placeholder={isArabic ? "أدخل اسمك الأول" : "Enter your first name"} value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full border rounded p-2"/>
+                <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full border rounded p-2"/>
               </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium">{isArabic ? "الاسم الأخير" : "Last Name"}</label>
-                <input type="text" placeholder={isArabic ? "أدخل اسمك الأخير" : "Enter your last name"} value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full border rounded p-2"/>
+                <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full border rounded p-2"/>
               </div>
             </div>
 
             {/* Email */}
             <div>
               <label className="block text-sm font-medium">{isArabic ? "البريد الإلكتروني" : "Email Address"}</label>
-              <input type="email" placeholder={isArabic ? "أدخل بريدك الإلكتروني" : "Enter your email"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border rounded p-2"/>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border rounded p-2"/>
             </div>
 
             {/* Profile photo */}
@@ -162,21 +130,9 @@ export default function AccountPage() {
             {/* Mobile, Country, City, Zip, Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-  <label className="block text-sm font-medium">
-    {isArabic ? "رقم الهاتف" : "Mobile Number"}
-  </label>
-  <input
-    type="text"
-    value={mobile}
-    onChange={(e) => {
-      const onlyNumbers = e.target.value.replace(/\D/g, "");
-      setMobile(onlyNumbers);
-    }}
-    placeholder={isArabic ? "أدخل رقم هاتفك" : "Enter your mobile number"}
-    className="w-full border rounded p-2"
-  />
-</div>
-
+                <label className="block text-sm font-medium">{isArabic ? "رقم الهاتف" : "Mobile Number"}</label>
+                <input type="text" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder={isArabic ? "أدخل رقم هاتفك" : "Enter your mobile number"} className="w-full border rounded p-2"/>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium">{isArabic ? "الدولة" : "Country"}</label>

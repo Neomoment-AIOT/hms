@@ -112,7 +112,7 @@ export default function Header() {
               onClick={() => setIsRetrieveBookingOpen(true)}
               className="border border-white px-3 py-1 rounded hover:bg-white hover:text-teal-700"
             >
-              {lang === "en" ? "Retrieve Booking" : "استرداد الحجز الخاص بي"}
+              {lang === "en" ? "My Booking" : "حجوزاتي"}
             </button>
 
             {/* User / Auth Buttons */}
@@ -207,7 +207,7 @@ export default function Header() {
               }}
               className="border border-teal-600 px-4 py-2 rounded hover:bg-teal-600 hover:text-white"
             >
-              {lang === "en" ? "Retrieve Booking" : "استرداد الحجز الخاص بي"}
+              {lang === "en" ? "My Booking" : "حجوزاتي"}
             </button>
 
             {/* Auth / User buttons */}
