@@ -82,7 +82,7 @@ export default function GuestDetailsPage() {
 
   const roomTotal = selectedRoom ? selectedRoom.price * count : 0;
   const services = 300;
-  const grandTotal = roomTotal + services + mealsTotal;
+  const grandTotal = roomTotal +  mealsTotal;
 
   const handleContinueToPayment = () => {
   const bookingData = {
@@ -91,14 +91,13 @@ export default function GuestDetailsPage() {
     checkIn: format(checkIn, "yyyy-MM-dd"),
     checkOut: format(checkOut, "yyyy-MM-dd"),
     meals,
-    services,
-    totalPrice: roomTotal,
+    totalAmount: roomTotal + mealsTotal,
   };
 
   sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
-
   router.push("/PayementSuccess");
 };
+
 
   return (
     <div className={`max-w-7xl mx-auto mt-20 px-4 py-6 ${isArabic ? "font-arabic" : ""}`} dir={isArabic ? "rtl" : "ltr"}>

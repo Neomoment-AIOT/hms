@@ -28,9 +28,9 @@ type BookingData = {
   checkIn: string;
   checkOut: string;
   meals: Record<MealKey, boolean>;
-  services: number;
-  totalPrice: number;
+  totalAmount: number;
 };
+
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -55,23 +55,21 @@ export default function PaymentSuccessPage() {
   }
 
   const {
-    roomName,
-    roomCount,
-    checkIn,
-    checkOut,
-    meals,
-    services,
-    totalPrice,
-  } = bookingData;
+  roomName,
+  roomCount,
+  checkIn,
+  checkOut,
+  meals,
+  totalAmount,
+} = bookingData;
+
 
   const selectedMeals = mealKeys.filter((meal) => meals[meal]);
   const mealTotal = mealKeys.reduce(
     (sum, meal) => sum + (meals[meal] ? MEAL_PRICES[meal] : 0),
     0
   );
-  const totalAmount = totalPrice + services + mealTotal;
-
-  /* ---------------- UI ---------------- */
+  const roomPrice = totalAmount - mealTotal;
 
   return (
     <div
@@ -172,7 +170,7 @@ export default function PaymentSuccessPage() {
 
             <div className="flex justify-between">
               <span>{isArabic ? `الغرفة ${roomCount} ${roomName}` : `Room ${roomCount} ${roomName}`}</span>
-              <span><Riyal /> {totalPrice}</span>
+              <span><Riyal /> {roomPrice}</span>
             </div>
 
             <div className="border-t pt-4 flex justify-between font-semibold text-lg">
