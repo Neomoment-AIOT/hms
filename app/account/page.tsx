@@ -4,6 +4,8 @@ import { useState, useEffect, useContext, useRef } from "react";
 import { LangContext } from "@/app/lang-provider";
 import { FaUser } from "react-icons/fa";
 import Link from "next/link";
+import MyBookingsPage from "../my-bookings/page";
+import MyReservationsPage from "../_components/my-reservations/MyReservationsPage";
 
 const countries = [
   "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia",
@@ -34,6 +36,8 @@ export default function AccountPage() {
   const isArabic = lang === "ar";
 
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  const [activePage, setActivePage] = useState("profile");
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -81,16 +85,34 @@ export default function AccountPage() {
           <div className="flex flex-col md:block justify-between">
             <h2 className="text-lg font-semibold mb-6">{isArabic ? "الإعدادات" : "Setting"}</h2>
             <ul className="space-y-4">
-              <li className="font-semibold text-teal-600 cursor-pointer">{isArabic ? "الملف الشخصي" : "Profile"}</li>
-              <li className="cursor-pointer" onClick={handleLogout}>{isArabic ? "تسجيل الخروج" : "Logout"}</li>
-            </ul>
-            <Link href="/" className="mt-6 inline-block bg-teal-700 text-white px-4 py-2 rounded">
+  <li
+    className={`cursor-pointer ${activePage === "profile" ? "font-semibold text-teal-600" : ""}`}
+    onClick={() => setActivePage("profile")}
+  >
+    {isArabic ? "الملف الشخصي" : "Profile"}
+  </li>
+
+  <li
+    className={`cursor-pointer ${activePage === "reservations" ? "font-semibold text-teal-600" : ""}`}
+    onClick={() => setActivePage("reservations")}
+  >
+    {isArabic ? "حجوزاتي" : "My Reservations"}
+  </li>
+
+  <li className="cursor-pointer" onClick={handleLogout}>
+    {isArabic ? "تسجيل الخروج" : "Logout"}
+  </li>
+</ul>
+
+            <Link href="/" className="mt-6 inline-block bg-linear-to-r from-[#1F8593] to-[#052E39] text-white px-5 py-2 rounded">
               {isArabic ? "العودة للصفحة الرئيسية" : "Back to Home"}
             </Link>
           </div>
         </aside>
-
-        {/* Main content */}
+        {activePage === "profile" && (
+  <>
+    
+      {/* Main content */}
         <main className="flex-1 bg-white p-6 md:p-8">
           <h1 className="text-2xl font-bold mb-6">{isArabic ? "الإعدادات" : "Setting"}</h1>
           <div className="space-y-4">
@@ -166,12 +188,16 @@ export default function AccountPage() {
 
             {/* Buttons */}
             <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 mt-4">
-              <button onClick={handleSave} className="bg-teal-700 text-white px-4 py-2 rounded hover:bg-teal-800">{isArabic ? "حفظ" : "Save"}</button>
+              <button onClick={handleSave} className="bg-linear-to-r from-[#1F8593] to-[#052E39] text-white px-4 py-2 rounded">{isArabic ? "حفظ" : "Save"}</button>
               <button onClick={() => window.location.reload()} className="border px-4 py-2 rounded">{isArabic ? "إلغاء" : "Cancel"}</button>
             </div>
 
           </div>
         </main>
+  </>
+)}
+        {activePage === "reservations" && <MyReservationsPage />}
+
       </div>
     </div>
   );
