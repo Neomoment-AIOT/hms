@@ -2,7 +2,7 @@
 
 import { useState, useContext, useEffect } from "react";
 import { FaBars, FaTimes, FaGlobe, FaUserCircle } from "react-icons/fa";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { LangContext } from "@/app/lang-provider";
 import Link from "next/link";
 import RetrieveBooking from "@/app/Retrive_Booking/page";
@@ -21,20 +21,18 @@ export default function Header() {
   const otherLanguage = lang === "en" ? "ar" : "en";
 
   const router = useRouter();
+  const pathname = usePathname();
 
-  // States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
-  // Popup states
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [isRetrieveBookingOpen, setIsRetrieveBookingOpen] = useState(false);
 
-  // Load user from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedUser = localStorage.getItem("user");
@@ -70,26 +68,80 @@ export default function Header() {
         dir={isArabic ? "rtl" : "ltr"}
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto px-6 h-20">
-          {/* Logo */}
-          <Link href="/">
-            <div className="bg-white rounded-full flex justify-center items-center">
-              <img src="/logo.png" alt="Logo" className="h-16 w-16 object-cover" />
-            </div>
-          </Link>
+          <div className="flex items-center space-x-8">
+            {/* Logo */}
+            <Link href="/">
+              <div className="bg-white rounded-full flex justify-center items-center">
+                <img src="/logo.png" alt="Logo" className="h-16 w-16 object-cover" />
+              </div>
+            </Link>
 
-          {/* Desktop Menu */}
-          <nav className={`hidden md:flex items-center space-x-7 ${isArabic ? "font-arabic" : ""}`}>
-            <Link href="/">{lang === "en" ? "Home" : "الرئيسية"}</Link>
-            <Link href="/about">{lang === "en" ? "About Us" : "معلومات عنا"}</Link>
-            <Link href="/hotel">{lang === "en" ? "Hotels" : "الفنادق"}</Link>
-            <Link href="/contact">{lang === "en" ? "Contact Us" : "اتصل بنا"}</Link>
-            <Link href="/blog">{lang === "en" ? "Blogs" : "مدونات"}</Link>
+            {/* Navigation Links */}
+            <nav className={`hidden md:flex items-center space-x-7 ${isArabic ? "font-arabic" : ""}`}>
+              <Link
+                href="/"
+                className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/"
+                    ? "border-white"
+                    : "border-transparent hover:border-white/50"
+                  }`}
+              >
+                {lang === "en" ? "Home" : "الرئيسية"}
+              </Link>
 
+
+              <Link
+                href="/about"
+                className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/about"
+                    ? "border-white"
+                    : "border-transparent hover:border-white/50"
+                  }`}
+              >
+                {lang === "en" ? "About Us" : "معلومات عنا"}
+              </Link>
+
+
+              <Link
+                href="/hotel"
+                className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/hotel"
+                    ? "border-white"
+                    : "border-transparent hover:border-white/50"
+                  }`}
+              >
+                {lang === "en" ? "Hotels" : "الفنادق"}
+              </Link>
+
+
+              <Link
+                href="/contact"
+                className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/contact"
+                    ? "border-white"
+                    : "border-transparent hover:border-white/50"
+                  }`}
+              >
+                {lang === "en" ? "Contact Us" : "اتصل بنا"}
+              </Link>
+
+
+              <Link
+                href="/blog"
+                className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/blog"
+                    ? "border-white"
+                    : "border-transparent hover:border-white/50"
+                  }`}
+              >
+                {lang === "en" ? "Blogs" : "مدونات"}
+              </Link>
+
+
+            </nav>
+          </div>
+
+          <div className="hidden md:flex items-center space-x-4">
             {/* Language Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 ${isArabic ? "font-arabic" : ""}`}
               >
                 <FaGlobe />
                 <span>{lang === "en" ? "English" : "العربية"}</span>
@@ -107,22 +159,22 @@ export default function Header() {
               )}
             </div>
 
-            {/* Desktop Retrieve Booking */}
+            {/* My Booking */}
             <button
               onClick={() => setIsRetrieveBookingOpen(true)}
-              className="border border-white px-3 py-1 rounded hover:bg-white hover:text-teal-700"
+              className={`border border-white px-3 py-1 rounded hover:bg-white hover:text-teal-700 ${isArabic ? "font-arabic" : ""}`}
             >
               {lang === "en" ? "My Booking" : "حجوزاتي"}
             </button>
 
-            {/* User / Auth Buttons */}
             {!user ? (
               <button
                 onClick={() => setIsSignInOpen(true)}
-                className="bg-white text-teal-700 px-3 py-1 rounded hover:bg-gray-100"
+                className={`bg-white text-teal-700 px-3 py-1 rounded hover:bg-gray-100 ${isArabic ? "font-arabic" : ""}`}
               >
                 {lang === "en" ? "Sign In" : "تسجيل الدخول"}
               </button>
+
             ) : (
               <div className="relative">
                 <button onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}>
@@ -138,7 +190,7 @@ export default function Header() {
 
                     <button
                       onClick={() => router.push("/account")}
-                      className="w-full mt-3 border px-3 py-1 rounded hover:bg-gray-100"
+                      className="w-full mt-3 border px-3 py-1 rounded hover:bg-gray-100 font-arabic"
                     >
                       {lang === "en" ? "Account" : "الحساب"}
                     </button>
@@ -153,7 +205,7 @@ export default function Header() {
                 )}
               </div>
             )}
-          </nav>
+          </div>
 
           {/* Mobile Toggle */}
           <button onClick={toggleMenu} className="md:hidden text-2xl">
@@ -210,7 +262,6 @@ export default function Header() {
               {lang === "en" ? "My Booking" : "حجوزاتي"}
             </button>
 
-            {/* Auth / User buttons */}
             {!user ? (
               <button
                 onClick={() => { setIsSignInOpen(true); toggleMenu(); }}
@@ -268,10 +319,9 @@ export default function Header() {
           isOpen={isRetrieveBookingOpen}
           onClose={() => setIsRetrieveBookingOpen(false)}
           openSignIn={() => setIsSignInOpen(true)}
-          user={user} // pass the logged-in user state
+          user={user}
         />
       )}
-
     </>
   );
 }

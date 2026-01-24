@@ -58,8 +58,9 @@ export default function Footer() {
     >
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
 
-        {/* Quick Links (uses Link) */}
-        <div className={isArabic ? "text-right" : "text-left"}>
+        {/* Quick Links */}
+        <div className={`${isArabic ? "text-right justify-self-end" : "text-left justify-self-start"} max-w-[220px]`}
+>
           <h3 className="text-white font-semibold mb-4">
             {isArabic ? "روابط سريعة" : "Quick Links"}
           </h3>
@@ -88,7 +89,7 @@ export default function Footer() {
         </div>
 
         {/* Contact Info */}
-        <div className={isArabic ? "text-right" : "text-left"}>
+       <div className={`${isArabic ? "text-right justify-self-end" : "text-left justify-self-start"} max-w-[220px]`}>
           <h3 className="text-white font-semibold mb-4">
             {isArabic ? "معلومات التواصل" : "Contact Information"}
           </h3>
@@ -124,7 +125,8 @@ export default function Footer() {
         </div>
 
         {/* Policies */}
-        <div className={isArabic ? "text-right" : "text-left"}>
+       <div className={`${isArabic ? "text-right" : "text-left"} max-w-[220px] mx-auto`}>
+
           <h3 className="text-white font-semibold mb-4">
             {isArabic ? "السياسات" : "Policies"}
           </h3>

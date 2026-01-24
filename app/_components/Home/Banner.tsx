@@ -180,32 +180,43 @@ export default function Banner() {
         className="absolute inset-0 w-full h-full object-cover"
       />
 
-      <div className="relative z-10 text-center text-white max-w-6xl w-full px-3 scale-90">
+      <div className="relative z-10 text-white max-w-7xl mx-auto w-full px-4">
         {/* Title */}
-        <h1
-          className={`text-2xl md:text-5xl font-semibold mb-2 ${lang === "ar" ? "font-arabic text-right w-full" : ""
-            }`}
-        >
-          {lang === "en"
-            ? "Book Your Hotel With Ease Today."
-            : "احجز فندقك بسهولة اليوم."}
-        </h1>
+<h1
+  className={`text-2xl md:text-5xl font-semibold mb-2 w-full
+    ${
+      lang === "ar"
+        ? "font-arabic text-right"
+        : "text-center"
+    }
+  `}
+>
+  {lang === "en"
+    ? "Book Your Hotel With Ease Today."
+    : "احجز فندقك بسهولة اليوم."}
+</h1>
 
-        {/* Subtitle */}
-        <p
-          className={`mb-3 text-sm md:text-base ${lang === "ar" ? "font-arabic text-right w-full" : ""
-            }`}
-        >
-          {lang === "en"
-            ? "Let us help you find the perfect stay for your Hajj and Umrah journey."
-            : "دعنا نساعدك في العثور على الإقامة المثالية لرحلة حجك وعمرتك."}
-        </p>
+{/* Subtitle */}
+<p
+  className={`mb-3 text-sm md:text-base w-full
+    ${
+      lang === "ar"
+        ? "font-arabic text-right"
+        : "text-center"
+    }
+  `}
+>
+  {lang === "en"
+    ? "Let us help you find the perfect stay for your Hajj and Umrah journey."
+    : "دعنا نساعدك في العثور على الإقامة المثالية لرحلة حجك وعمرتك."}
+</p>
+
 
         {/* Search Form */}
         <div
-          className={`flex flex-col md:flex-row gap-2 justify-center items-stretch rounded-lg p-2 shadow-md text-black ${lang === "ar" ? "text-right" : "text-left"
-            }`}
-        >
+  className="flex flex-col md:flex-row gap-2 justify-between items-stretch rounded-lg p-2 shadow-md text-black w-full"
+>
+
           {/* City */}
           <div className="relative flex-1 bg-white flex items-center rounded border border-gray-300 min-h-12 px-3 pt-5 pb-1">
             <label
