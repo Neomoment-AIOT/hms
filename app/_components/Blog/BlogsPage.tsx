@@ -52,66 +52,65 @@ export default function BlogsPage() {
 
   return (
     <section
-      className={`bg-[#f8fafb] py-10 ${ar ? "direction-rtl text-right" : ""}`}
+      className={`bg-[#f8fafb] py-10 min-h-screen ${ar ? "direction-rtl text-right" : "text-left"}`}
+      dir={ar ? "rtl" : "ltr"}
     >
-      <div className="max-w-[1200px] mx-auto px-4 space-y-10">
-
+      <div className="max-w-[1200px] mx-auto px-4 space-y-6 md:space-y-10">
+        
         {blogs.map((b) => (
           <article
             key={b.slug}
-            className={`bg-white rounded-md shadow-sm flex gap-6 items-start p-6 
-              ${ar ? "flex-row-reverse text-right" : "text-left"}`}
+            className={`bg-white rounded-lg shadow-sm flex flex-col md:flex-row gap-6 items-center md:items-start p-4 md:p-6 transition-all hover:shadow-md
+              ${ar ? "md:flex-row-reverse" : ""}`}
           >
+            <div className="w-full md:w-48 h-56 md:h-40 shrink-0">
+              <img
+                src={b.image}
+                alt="blog"
+                className="w-full h-full object-cover rounded-md"
+              />
+            </div>
 
-            {/* Image */}
-            <img
-              src={b.image}
-              alt="blog"
-              className="w-48 h-36 object-cover rounded-md"
-            />
-
-            {/* Content */}
-            <div className="flex-1">
-              <h2 className={`text-xl font-bold ${ar ? "font-arabic" : ""}`}>
+            <div className="flex-1 w-full">
+              <h2 className={`text-xl md:text-2xl font-bold text-[#052E39] ${ar ? "font-arabic" : ""}`}>
                 {ar ? b.titleAr : b.titleEn}
               </h2>
 
-              <p className={`text-gray-600 mt-2 ${ar ? "font-arabic" : ""}`}>
+              <p className={`text-gray-600 mt-3 text-sm md:text-base leading-relaxed ${ar ? "font-arabic" : ""}`}>
                 {ar ? b.descriptionAr : b.descriptionEn}
               </p>
 
               <div
-                className={`flex items-center gap-6 text-sm mt-3 
+                className={`flex flex-wrap items-center gap-x-6 gap-y-2 text-xs md:text-sm mt-4 text-gray-500
                   ${ar ? "flex-row-reverse" : ""}`}
               >
-
                 <span className={ar ? "font-arabic" : ""}>
-                  <strong>{ar ? "التاريخ:" : "Date:"}</strong>{" "}
-                  <span className="text-emerald-700">{b.date}</span>
+                  <strong className="text-gray-700">{ar ? "التاريخ:" : "Date:"}</strong>{" "}
+                  <span className="text-[#1F8593]">{b.date}</span>
                 </span>
 
                 <span className={ar ? "font-arabic" : ""}>
-                  <strong>{ar ? "الوقت:" : "Time:"}</strong>{" "}
-                  <span className="text-emerald-700">{b.time}</span>
+                  <strong className="text-gray-700">{ar ? "الوقت:" : "Time:"}</strong>{" "}
+                  <span className="text-[#1F8593]">{b.time}</span>
                 </span>
 
                 <span className={ar ? "font-arabic" : ""}>
-                  <strong>{ar ? "التعليقات:" : "Comments:"}</strong>{" "}
-                  <span className="text-emerald-700">{b.comments}</span>
+                  <strong className="text-gray-700">{ar ? "التعليقات:" : "Comments:"}</strong>{" "}
+                  <span className="text-[#1F8593]">{b.comments}</span>
                 </span>
-
               </div>
 
-              <Link href={`/blog/${b.slug}`} className="inline-block">
-                <button
-                  className={`mt-4 bg-linear-to-r from-[#1F8593] to-[#052E39] 
-                    px-6 py-2 text-white font-semibold rounded-md cursor-pointer 
-                    ${ar ? "font-arabic" : ""}`}
-                >
-                  {ar ? "اقرأ المزيد..." : "Learn More..."}
-                </button>
-              </Link>
-
+              <div className="mt-6">
+                <Link href={`/blog/${b.slug}`} className="inline-block w-full md:w-auto">
+                  <button
+                    className={`w-full md:w-auto bg-linear-to-r from-[#1F8593] to-[#052E39] 
+                      px-8 py-2.5 text-white font-semibold rounded-md hover:opacity-90 transition-opacity
+                      ${ar ? "font-arabic" : ""}`}
+                  >
+                    {ar ? "اقرأ المزيد..." : "Learn More..."}
+                  </button>
+                </Link>
+              </div>
             </div>
           </article>
         ))}

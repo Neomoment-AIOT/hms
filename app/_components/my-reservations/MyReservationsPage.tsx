@@ -19,9 +19,8 @@ function StatusTag({ label, color, isArabic }: { label: string; color: string; i
       </div>
 
       <div
-        className="w-2 h-2 rounded-full -ml-3"
-        style={{ backgroundColor: "white" }}
-      ></div>
+        className={`w-2 h-2 rounded-full bg-white ${isArabic ? "-mr-3" : "-ml-3"}`}
+      />
     </div>
   );
 }
@@ -78,7 +77,8 @@ export default function MyReservationsPage() {
         {isArabic ? "حجوزاتي" : "My Reservations"}
       </h1>
 
-      <div className="flex border-b border-gray-300 mb-6">
+      {/* Tabs – mobile safe */}
+      <div className="flex border-b border-gray-300 mb-6 overflow-x-auto">
         {[
           { key: "all", label: isArabic ? "الكل" : "All" },
           { key: "confirmed", label: isArabic ? "مؤكد" : "Confirmed" },
@@ -88,37 +88,36 @@ export default function MyReservationsPage() {
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key)}
-            className={`px-4 py-2 -mb-px] border-b-2 font-medium ${filter === tab.key
+            className={`px-4 py-2 whitespace-nowrap border-b-2 font-medium ${
+              filter === tab.key
                 ? "border-black text-black"
                 : "border-transparent text-gray-500"
-              }`}
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-
       {/* Cards */}
-      <div className="space-y-6">
+      <div className="space-y-6 w-full md:w-[800px] mx-auto">
         {filtered.map((b) => (
           <div
             key={b.id}
-            className="border rounded-lg p-6 shadow-sm bg-white space-y-2 w-[200%]"
+            className="border rounded-lg p-6 shadow-sm bg-white space-y-2 w-full"
           >
             <h2 className="text-lg font-semibold">
               {isArabic
                 ? b.room === "Deluxe Room"
                   ? "غرفة ديلوكس"
                   : b.room === "Double Room"
-                    ? "غرفة مزدوجة"
-                    : b.room === "Family Suite"
-                      ? "جناح عائلي"
-                      : b.room
+                  ? "غرفة مزدوجة"
+                  : "جناح عائلي"
                 : b.room}
             </h2>
 
-            <div className="flex items-center gap-2">
+            {/* Booking ID */}
+            <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">
                 {isArabic ? "معرّف الحجز" : "Booking ID"}:
               </span>
@@ -128,83 +127,76 @@ export default function MyReservationsPage() {
                   b.status === "confirmed"
                     ? isArabic ? "مؤكد" : "Confirmed"
                     : b.status === "cancelled"
-                      ? isArabic ? "ملغى" : "Cancelled"
-                      : isArabic
-                        ? "غير مؤكد"
-                        : "Unconfirmed"
+                    ? isArabic ? "ملغى" : "Cancelled"
+                    : isArabic ? "غير مؤكد" : "Unconfirmed"
                 }
                 color={
                   b.status === "confirmed"
                     ? "#16A34A"
                     : b.status === "cancelled"
-                      ? "#DC2626"
-                      : "#C67115"
+                    ? "#DC2626"
+                    : "#C67115"
                 }
                 isArabic={isArabic}
               />
             </div>
 
-
             <p>
               <span className="font-medium">
                 {isArabic ? "تاريخ الإقامة" : "Stay Date"}:
-              </span>
-              {" "}
+              </span>{" "}
               {b.stayFrom} | {b.stayTo}
             </p>
+
             <p>
               <span className="font-medium">
                 {isArabic ? "الغرف" : "Rooms"}:
-              </span>
+              </span>{" "}
               {b.rooms}
             </p>
+
             <p>
               <span className="font-medium">
                 {isArabic ? "الوجبات" : "Meals"}:
-              </span>
-              {" "}
+              </span>{" "}
               {isArabic
                 ? b.meals
-                  .replace("Breakfast", "إفطار")
-                  .replace("Lunch", "غداء")
-                  .replace("Dinner", "عشاء")
+                    .replace("Breakfast", "إفطار")
+                    .replace("Lunch", "غداء")
+                    .replace("Dinner", "عشاء")
                 : b.meals}
-
             </p>
-            <div className="flex justify-between items-center">
+
+            {/* Guests + Button */}
+            <div className="flex justify-between items-center flex-wrap gap-2">
               <p>
                 <span className="font-medium">
                   {isArabic ? "الضيوف" : "Guests"}:
-                </span>
-                {" "}
+                </span>{" "}
                 {isArabic
-                  ? b.guests
-                    .replace("Adult", "بالغ")
-                    .replace("Child", "طفل")
+                  ? b.guests.replace("Adult", "بالغ").replace("Child", "طفل")
                   : b.guests}
-
               </p>
+
               {b.status === "confirmed" && (
-                <button
-                  className="bg-red-600 text-white px-4 py-1 rounded-md text-sm font-semibold"
-                >
+                <button className="bg-red-600 text-white px-4 py-1 rounded-md text-sm font-semibold">
                   {isArabic ? "إلغاء" : "Cancel"}
                 </button>
               )}
+
               {b.status === "unconfirmed" && (
-                <button
-                  className="bg-green-600 text-white px-4 py-1 rounded-md text-sm font-semibold"
-                >
+                <button className="bg-green-600 text-white px-4 py-1 rounded-md text-sm font-semibold">
                   {isArabic ? "تأكيد" : "Confirm"}
                 </button>
               )}
             </div>
+
             <hr className="my-2" />
+
             <p className="text-lg font-bold flex items-center gap-2">
               <img src="/Riyal_Black.png" alt="SAR" className="w-5 h-5 inline-block" />
               {b.price}
             </p>
-
           </div>
         ))}
       </div>

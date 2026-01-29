@@ -31,7 +31,6 @@ type BookingData = {
   totalAmount: number;
 };
 
-
 /* ---------------- COMPONENT ---------------- */
 
 export default function PaymentSuccessPage() {
@@ -49,20 +48,14 @@ export default function PaymentSuccessPage() {
   }, []);
 
   if (!bookingData) {
-    return <p className={`text-center mt-32 text-xl ${isArabic ? "font-arabic" : ""}`}>
-      {isArabic ? "جارٍ التحميل..." : "Loading..."}
-    </p>;
+    return (
+      <p className={`text-center mt-32 text-xl ${isArabic ? "font-arabic" : ""}`}>
+        {isArabic ? "جارٍ التحميل..." : "Loading..."}
+      </p>
+    );
   }
 
-  const {
-  roomName,
-  roomCount,
-  checkIn,
-  checkOut,
-  meals,
-  totalAmount,
-} = bookingData;
-
+  const { roomName, roomCount, checkIn, checkOut, meals, totalAmount } = bookingData;
 
   const selectedMeals = mealKeys.filter((meal) => meals[meal]);
   const mealTotal = mealKeys.reduce(
@@ -73,41 +66,41 @@ export default function PaymentSuccessPage() {
 
   return (
     <div
-      className={`max-w-4xl mx-auto mt-24 p-10 space-y-10 ${isArabic ? "font-arabic" : ""}`}
+      className={`max-w-4xl mx-auto mt-10 md:mt-24 p-4 md:p-10 space-y-6 md:space-y-10 ${
+        isArabic ? "font-arabic" : ""
+      }`}
       dir={isArabic ? "rtl" : "ltr"}
     >
-      <h1 className="text-4xl font-semibold text-center">
+      <h1 className="text-2xl md:text-4xl mt-10 font-semibold text-center">
         {isArabic ? "تم الدفع بنجاح" : "Payment Successful"}
       </h1>
 
-      <div className="bg-white rounded-2xl shadow-lg p-10 space-y-8">
-        {/* Header */}
-        <div className="flex justify-between text-lg">
+      <div className="bg-white rounded-2xl shadow-lg p-6 md:p-10 space-y-8">
+        <div className="flex flex-col md:flex-row justify-between text-base md:text-lg gap-2">
           <span className="font-semibold">{isArabic ? "ملخص الحجز" : "Booking Summary"}</span>
-          <span>{checkIn} • {checkOut}</span>
+          <span className="text-gray-600">{checkIn} • {checkOut}</span>
         </div>
 
-        {/* Room Info */}
-        <div className={`flex gap-6 items-start ${isArabic ? "flex-row-reverse" : ""}`}>
+        <div className={`flex flex-col md:flex-row gap-6 items-center md:items-start ${isArabic ? "md:flex-row-reverse" : ""}`}>
           <img
             src="/Hotel_Room/luxuryroom.jpeg"
-            className="w-24 h-24 rounded-xl object-cover"
+            className="w-full md:w-24 h-48 md:h-24 rounded-xl object-cover"
             alt="hotel"
           />
-          <div className="flex-1 text-right">
+          <div className={`flex-1 text-center ${isArabic ? "md:text-right" : "md:text-left"}`}>
             <h4 className="font-semibold text-xl">{roomName}</h4>
-            <div className="flex items-center gap-2 text-base text-gray-600 justify-end">
+            <div className={`flex items-center gap-2 text-base text-gray-600 justify-center ${isArabic ? "md:justify-end" : "md:justify-start"}`}>
               <FaStar className="text-yellow-400 text-lg" /> 3 / 5
             </div>
           </div>
-          <button className="border px-4 py-2 rounded-lg text-base flex items-center gap-2">
+          <button className="w-full md:w-auto border px-4 py-2 rounded-lg text-base flex items-center justify-center gap-2">
             <FaDownload /> {isArabic ? "تحميل PDF" : "Download PDF"}
           </button>
         </div>
 
         {/* Address */}
-        <div className={`flex items-start gap-3 text-base text-gray-600 ${isArabic ? "flex-row-reverse text-right" : ""}`}>
-          <FaMapMarkerAlt className="text-xl" />
+        <div className={`flex items-start gap-3 text-base text-gray-600 ${isArabic ? "md:flex-row-reverse text-right" : ""}`}>
+          <FaMapMarkerAlt className="text-xl shrink-0 mt-1" />
           <p>{isArabic
             ? "بلعقيق، طريق الملك فهد، الرياض 13515، المملكة العربية السعودية."
             : "BeAl Aqiq, RRAA8604, 8604 King Fahd Branch Rd, Riyadh 13515, Saudi Arabia."
@@ -115,17 +108,16 @@ export default function PaymentSuccessPage() {
         </div>
 
         {/* Summary */}
-        <div className="text-base space-y-4">
-          <div className="flex justify-between">
-            <span>{isArabic ? "مرجع الحجز" : "Booking Ref."}</span>
-            <span>REF202503091738433773</span>
+        <div className="text-sm md:text-base space-y-4">
+          <div className="flex justify-between gap-4">
+            <span className="shrink-0">{isArabic ? "مرجع الحجز" : "Booking Ref."}</span>
+            <span className="truncate">REF202503091738433773</span>
           </div>
 
-
           {/* Meal Summary */}
-          <div className="flex justify-between">
+          <div className="flex flex-col sm:flex-row justify-between gap-2">
             <span>{isArabic ? "خدمات الوجبات" : "Meal Services"}</span>
-            <span className="flex gap-3">
+            <span className="flex flex-wrap gap-2 md:gap-3">
               {selectedMeals.length ? selectedMeals.map((meal) => (
                 <span
                   key={meal}
@@ -155,8 +147,7 @@ export default function PaymentSuccessPage() {
         <div className="mt-6">
           <h4 className="font-semibold mb-4 text-xl">{isArabic ? "تفصيل السعر" : "Price Breakdown"}</h4>
 
-          <div className="space-y-4 text-base">
-
+          <div className="space-y-4 text-sm md:text-base">
             {mealKeys.map((meal) => (
               <div key={meal} className="flex justify-between">
                 <span>{isArabic
@@ -164,36 +155,35 @@ export default function PaymentSuccessPage() {
                     meal === "lunch" ? "غداء" : "عشاء"
                   : meal.charAt(0).toUpperCase() + meal.slice(1)
                 }</span>
-                <span><Riyal /> {meals[meal] ? MEAL_PRICES[meal] : "0.00"}</span>
+                <span className="font-medium"><Riyal /> {meals[meal] ? MEAL_PRICES[meal] : "0.00"}</span>
               </div>
             ))}
 
             <div className="flex justify-between">
               <span>{isArabic ? `الغرفة ${roomCount} ${roomName}` : `Room ${roomCount} ${roomName}`}</span>
-              <span><Riyal /> {roomPrice}</span>
+              <span className="font-medium"><Riyal /> {roomPrice}</span>
             </div>
 
             <div className="border-t pt-4 flex justify-between font-semibold text-lg">
               <span>{isArabic ? "الإجمالي" : "Total"}</span>
-              <span className="bg-orange-100 px-4 py-1 rounded-lg"><Riyal /> {totalAmount}</span>
+              <span className="bg-orange-100 px-4 py-1 rounded-lg shrink-0"><Riyal /> {totalAmount}</span>
             </div>
 
             <div className="flex justify-between font-semibold text-lg">
               <span>{isArabic ? "المبلغ الواجب دفعه" : "Amount to pay"}</span>
-              <span className="bg-green-100 px-4 py-1 rounded-lg"><Riyal /> {totalAmount}</span>
+              <span className="bg-green-100 px-4 py-1 rounded-lg shrink-0"><Riyal /> {totalAmount}</span>
             </div>
           </div>
 
-          {/* Buttons */}
-          <div className={`flex gap-6 mt-10 ${isArabic ? "flex-row-reverse" : ""}`}>
+          <div className={`flex flex-col md:flex-row gap-4 md:gap-6 mt-10 ${isArabic ? "md:flex-row-reverse" : ""}`}>
             <button
-              className="flex-1 bg-teal-700 text-white py-4 rounded-xl text-lg"
+              className="w-full bg-teal-700 text-white py-4 rounded-xl text-lg font-medium"
               onClick={() => router.push("/my-bookings")}
             >
               {isArabic ? "الذهاب إلى الحجز" : "Go to Booking"}
             </button>
             <button
-              className="flex-1 bg-gray-200 py-4 rounded-xl text-lg"
+              className="w-full bg-gray-200 py-4 rounded-xl text-lg font-medium"
               onClick={() => router.push("/hotel")}
             >
               {isArabic ? "استكشاف خدمات الفندق" : "Explore Hotel Services"}

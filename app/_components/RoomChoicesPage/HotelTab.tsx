@@ -66,8 +66,6 @@ export default function HotelTab() {
   </div>
 </div>
 
-
-
       {/* Tab Content */}
       <div className="mt-4">
         {activeTab === "Photos" && <PhotosPage />}

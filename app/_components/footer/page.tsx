@@ -52,15 +52,20 @@ export default function Footer() {
 
   return (
     <footer
-      className={`bg-black text-gray-300 px-6 py-12 md:px-16 ${isArabic ? "font-arabic" : ""
-        }`}
+      className={`bg-black text-gray-300 px-6 py-12 md:px-16 ${
+        isArabic ? "font-arabic" : ""
+      }`}
       dir={isArabic ? "rtl" : "ltr"}
     >
-      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-
-        {/* Quick Links */}
-        <div className={`${isArabic ? "text-right justify-self-end" : "text-left justify-self-start"} max-w-[220px]`}
->
+      {/* LAYOUT FIX: 
+          Using 'flex' with 'justify-between' instead of 'grid'. 
+          This ensures columns are spaced based on the container width, 
+          preventing long text in one column from 'crowding' the next one.
+      */}
+      <div className="max-w-7xl mx-auto flex flex-wrap justify-between gap-10 lg:gap-4">
+        
+        {/* Column 1: Quick Links */}
+        <div className="min-w-[150px]">
           <h3 className="text-white font-semibold mb-4">
             {isArabic ? "روابط سريعة" : "Quick Links"}
           </h3>
@@ -88,35 +93,29 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Contact Info */}
-       <div className={`${isArabic ? "text-right justify-self-end" : "text-left justify-self-start"} max-w-[220px]`}>
+        {/* Column 2: Contact Info */}
+        <div className="min-w-[200px]">
           <h3 className="text-white font-semibold mb-4">
             {isArabic ? "معلومات التواصل" : "Contact Information"}
           </h3>
           <ul className="space-y-2">
             <li>
               {isArabic ? (
-                <>
-                  الهاتف: <span dir="ltr">+966 9200 10417</span>
-                </>
+                <>الهاتف: <span dir="ltr">+966 9200 10417</span></>
               ) : (
                 "Phone: +966 9200 10417"
               )}
             </li>
             <li>
               {isArabic ? (
-                <>
-                  البريد: <span dir="ltr">marketing@alrefaa.co</span>
-                </>
+                <>البريد: <span dir="ltr">marketing@alrefaa.co</span></>
               ) : (
                 "Email: marketing@alrefaa.co"
               )}
             </li>
             <li>
               {isArabic ? (
-                <>
-                  الموقع: العزيزية، مكة، السعودية
-                </>
+                "الموقع: العزيزية، مكة، السعودية"
               ) : (
                 "Location: Al Azizyah, Makkah, Saudia"
               )}
@@ -124,9 +123,8 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Policies */}
-       <div className={`${isArabic ? "text-right" : "text-left"} max-w-[220px] mx-auto`}>
-
+        {/* Column 3: Policies */}
+        <div className="min-w-[150px]">
           <h3 className="text-white font-semibold mb-4">
             {isArabic ? "السياسات" : "Policies"}
           </h3>
@@ -138,8 +136,8 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Subscribe */}
-        <div className="bg-gray-800 p-6 rounded-lg col-span-1 w-full">
+        {/* Column 4: Subscribe */}
+        <div className="bg-gray-800 p-6 rounded-lg w-full lg:w-auto lg:max-w-[320px]">
           <h3 className="text-white font-semibold mb-4">
             {isArabic ? "اشترك" : "Subscribe"}
           </h3>
@@ -147,7 +145,6 @@ export default function Footer() {
           <form onSubmit={handleSubscribe} className="flex mb-2">
             <input
               type="email"
-              suppressHydrationWarning
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -159,7 +156,6 @@ export default function Footer() {
             />
 
             <button
-              suppressHydrationWarning
               type="submit"
               disabled={status.loading}
               className={`
@@ -178,18 +174,7 @@ export default function Footer() {
             </button>
           </form>
 
-          <div className="min-h-6 mb-2">
-            {status.success && (
-              <p className="text-green-400 text-sm">
-                {isArabic ? "تم الاشتراك بنجاح!" : "Subscribed successfully!"}
-              </p>
-            )}
-            {status.error && (
-              <p className="text-red-400 text-sm">{status.error}</p>
-            )}
-          </div>
-
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-400 mt-4">
             {isArabic
               ? "هدفنا هو نقل التأثيرات الإيجابية من خلال تطوير طريقة تفاعل الشركات مع عملائها وفِرقها."
               : "Our goal is to translate the positive effects from revolutionizing how companies engage with their clients & their team."}
@@ -198,30 +183,28 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-gray-700 my-8"></div>
-      <div
-        className={`
-          max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center 
-          text-sm text-gray-400 
-          ${isArabic ? "text-right" : "text-left"}
-        `}
-      >
-        {/* Copyright */}
+      
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
         <p>
           {isArabic ? "جميع الحقوق محفوظة © 2025 الرفاع" : "Copyright © 2025 AL-Riffa"}
         </p>
 
-        {/* Social Media Icons */}
-        <div
-          className={`
-            flex mt-4 md:mt-0 
-            ${isArabic ? "flex-row-reverse space-x-reverse space-x-6" : "space-x-4"}
-          `}
-        >
-          <a href="https://www.linkedin.com/company/al-refaa-al-omrani-%D8%B4%D8%B1%D9%83%D8%A9-%D8%A7%D9%84%D8%B1%D9%81%D8%A7%D8%B9-%D8%A7%D9%84%D8%B9%D9%85%D8%B1%D8%A7%D9%86%D9%8A/" className="text-white border border-gray-200 p-3 rounded-full"><FaLinkedin size={24} /></a>
-          <a href="https://www.facebook.com/alrefaaforhotels" className="text-white border border-gray-200 p-3 rounded-full"><FaFacebook size={24} /></a>
-          <a href="https://x.com/alrefaa_alomran" className="text-white border border-gray-200 p-3 rounded-full"><SiX size={24} /></a>
-          <a href="https://www.instagram.com/alrefaamotels/" className="text-white border border-gray-200 p-3 rounded-full"><FaInstagram size={24} /></a>
-          <a href="https://wa.me/966920010417" target="_blank" rel="noopener noreferrer" className="text-white border border-gray-200 p-3 rounded-full"><FaWhatsapp size={24} /></a>
+        <div className={`flex mt-4 md:mt-0 ${isArabic ? "flex-row-reverse space-x-reverse space-x-6" : "space-x-4"}`}>
+          <a href="https://www.linkedin.com/company/al-refaa-al-omrani" className="text-white border border-gray-200 p-3 rounded-full">
+            <FaLinkedin size={20} />
+          </a>
+          <a href="https://www.facebook.com/alrefaaforhotels" className="text-white border border-gray-200 p-3 rounded-full">
+            <FaFacebook size={20} />
+          </a>
+          <a href="https://x.com/alrefaa_alomran" className="text-white border border-gray-200 p-3 rounded-full">
+            <SiX size={20} />
+          </a>
+          <a href="https://www.instagram.com/alrefaamotels/" className="text-white border border-gray-200 p-3 rounded-full ">
+            <FaInstagram size={20} />
+          </a>
+          <a href="https://wa.me/966920010417" target="_blank" rel="noopener noreferrer" className="text-white border border-gray-200 p-3 rounded-full ">
+            <FaWhatsapp size={20} />
+          </a>
         </div>
       </div>
     </footer>
