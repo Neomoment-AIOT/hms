@@ -67,11 +67,15 @@ export default function Header() {
         className="bg-linear-to-r from-[#1F8593] to-[#052E39] text-white fixed top-0 left-0 w-full z-50 shadow-md"
         dir={isArabic ? "rtl" : "ltr"}
       >
-        <div className="flex items-center justify-between max-w-7xl mx-auto px-6 h-20">
+        <div className="flex items-center justify-between w-full px-10 xl:px-14 h-20">
+
           <div className="flex items-center space-x-8">
             {/* Logo */}
             <Link href="/">
-              <div className="bg-white rounded-full flex justify-center items-center">
+              <div
+                className={`bg-white rounded-full flex justify-center items-center ${isArabic ? "ml-4" : "mr-4"
+                  }`}
+              >
                 <img src="/logo.png" alt="Logo" className="h-16 w-16 object-cover" />
               </div>
             </Link>
@@ -81,62 +85,58 @@ export default function Header() {
               <Link
                 href="/"
                 className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/"
-                    ? "border-white"
-                    : "border-transparent hover:border-white/50"
+                  ? "border-white"
+                  : "border-transparent hover:border-white/50"
                   }`}
               >
                 {lang === "en" ? "Home" : "الرئيسية"}
               </Link>
 
-
               <Link
                 href="/about"
                 className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/about"
-                    ? "border-white"
-                    : "border-transparent hover:border-white/50"
+                  ? "border-white"
+                  : "border-transparent hover:border-white/50"
                   }`}
               >
                 {lang === "en" ? "About Us" : "معلومات عنا"}
               </Link>
 
-
               <Link
                 href="/hotel"
                 className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/hotel"
-                    ? "border-white"
-                    : "border-transparent hover:border-white/50"
+                  ? "border-white"
+                  : "border-transparent hover:border-white/50"
                   }`}
               >
                 {lang === "en" ? "Hotels" : "الفنادق"}
               </Link>
 
-
               <Link
                 href="/contact"
                 className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/contact"
-                    ? "border-white"
-                    : "border-transparent hover:border-white/50"
+                  ? "border-white"
+                  : "border-transparent hover:border-white/50"
                   }`}
               >
                 {lang === "en" ? "Contact Us" : "اتصل بنا"}
               </Link>
 
-
               <Link
                 href="/blog"
                 className={`pb-1 border-b-2 transition-all duration-300 ease-in-out ${pathname === "/blog"
-                    ? "border-white"
-                    : "border-transparent hover:border-white/50"
+                  ? "border-white"
+                  : "border-transparent hover:border-white/50"
                   }`}
               >
                 {lang === "en" ? "Blogs" : "مدونات"}
               </Link>
 
-
             </nav>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 pr-4 xl:pr-6">
+
             {/* Language Dropdown */}
             <div className="relative">
               <button
@@ -233,7 +233,6 @@ export default function Header() {
             <Link href="/contact" onClick={toggleMenu}>{lang === "en" ? "Contact Us" : "اتصل بنا"}</Link>
             <Link href="/blog" onClick={toggleMenu}>{lang === "en" ? "Blogs" : "مدونات"}</Link>
 
-            {/* Language */}
             <div>
               <button onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)} className="flex items-center gap-2">
                 <FaGlobe size={18} />
@@ -251,7 +250,6 @@ export default function Header() {
               )}
             </div>
 
-            {/* Mobile Retrieve Booking */}
             <button
               onClick={() => {
                 setIsRetrieveBookingOpen(true);
@@ -289,7 +287,6 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Popups */}
       {isSignInOpen && (
         <SignIn
           onClose={() => setIsSignInOpen(false)}
@@ -313,7 +310,6 @@ export default function Header() {
         />
       )}
 
-      {/* Retrieve Booking Modal */}
       {isRetrieveBookingOpen && (
         <RetrieveBooking
           isOpen={isRetrieveBookingOpen}
