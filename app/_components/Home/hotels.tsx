@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { LangContext } from "@/app/lang-provider";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type Hotel = {
@@ -38,6 +38,38 @@ export default function Hotels() {
   const isArabic = lang === "ar";
   const router = useRouter();
 
+  const [hotelsList, setHotelsList] = useState(hotels);
+  useEffect(() => {
+    try {
+      // Load disabled hotels map
+      const disabledRaw = localStorage.getItem("admin_disabled_hotels");
+      const disabledMap: Record<string, boolean> = disabledRaw ? JSON.parse(disabledRaw) : {};
+
+      const stored = localStorage.getItem("admin_odoo_hotels");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setHotelsList(
+            parsed
+              .filter((h: Record<string, unknown>) => !disabledMap[String(h.id)])
+              .map((h: Record<string, unknown>) => ({
+                id: h.id as number,
+                nameEn: ((h.name as string) || (h.nameEn as string) || "") as string,
+                nameAr: ((h.arabicName as string) || (h.nameAr as string) || "") as string,
+                price: (h.price || 0) as number,
+                imageUrl: ((h.image as string) || (h.imageUrl as string) || "/hotel/hotel1.jpg") as string,
+              }))
+          );
+          return;
+        }
+      }
+      // Fallback: filter hardcoded list by disabled map
+      if (Object.keys(disabledMap).length > 0) {
+        setHotelsList(hotels.filter((h) => !disabledMap[String(h.id)]));
+      }
+    } catch {}
+  }, []);
+
   return (
     <section className="w-full bg-white" dir={isArabic ? "rtl" : "ltr"}>
       <div className="max-w-[1440px] mx-auto p-6">
@@ -49,7 +81,7 @@ export default function Hotels() {
 
         {/* Hotels Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {hotels.map((hotel) => (
+          {hotelsList.map((hotel) => (
             <div
               key={hotel.id}
               onClick={() => router.push(`/RoomChoices`)}

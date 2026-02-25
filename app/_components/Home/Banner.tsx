@@ -5,6 +5,7 @@ import {
   useRef,
   useContext,
   useEffect,
+  useMemo,
   useState as useReactState,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ import { createPortal } from "react-dom";
 import { LangContext } from "@/app/lang-provider";
 import ArabicCalendar from "../ArabicCalendar";
 import { format } from "date-fns";
+import BannerMedia, { type BannerMediaConfig } from "./BannerMedia";
 
 type GuestDetails = {
   room: number;
@@ -22,6 +24,57 @@ type GuestDetails = {
 export default function Banner() {
   const { lang } = useContext(LangContext);
   const router = useRouter();
+
+  // Admin-managed banner data (extended for media types)
+  const [adminBanner, setAdminBanner] = useState<{
+    imageUrl?: string;
+    videoUrl?: string;
+    animationHtml?: string;
+    mediaType?: string;
+    carouselItems?: { type: "image" | "video"; url: string }[];
+    carouselInterval?: number;
+    titleEn?: string;
+    titleAr?: string;
+    subtitleEn?: string;
+    subtitleAr?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("admin_global_banner");
+      if (stored) setAdminBanner(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  // Build BannerMediaConfig from admin data
+  const mediaConfig = useMemo<BannerMediaConfig>(() => {
+    if (!adminBanner || !adminBanner.mediaType || adminBanner.mediaType === "image") {
+      return {
+        mediaType: "image",
+        imageUrl: adminBanner?.imageUrl || "/banner.jpg",
+      };
+    }
+    if (adminBanner.mediaType === "video") {
+      return {
+        mediaType: "video",
+        videoUrl: adminBanner.videoUrl || "",
+      };
+    }
+    if (adminBanner.mediaType === "animation") {
+      return {
+        mediaType: "animation",
+        animationHtml: adminBanner.animationHtml || "",
+      };
+    }
+    if (adminBanner.mediaType === "carousel") {
+      return {
+        mediaType: "carousel",
+        carouselItems: adminBanner.carouselItems || [],
+        carouselInterval: adminBanner.carouselInterval || 5000,
+      };
+    }
+    return { mediaType: "image", imageUrl: "/banner.jpg" };
+  }, [adminBanner]);
 
   const getToday = () => {
     const d = new Date();
@@ -174,13 +227,13 @@ export default function Banner() {
       className="relative h-[420px] w-full flex items-center justify-center overflow-hidden transition-all duration-300"
       style={{ marginTop: `${headerHeight}px` }}
     >
-      <img
-        src="/banner.jpg"
-        alt="Banner"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {/* Dynamic banner media: image / video / animation / carousel */}
+      <BannerMedia config={mediaConfig} />
 
-      <div className="relative z-10 text-white max-w-7xl mx-auto w-full px-4">
+      {/* Dark overlay for text readability */}
+      <div className="absolute inset-0 bg-black/30 z-[1]" />
+
+      <div className="relative z-[2] text-white max-w-7xl mx-auto w-full px-4">
         {/* Title */}
 <h1
   className={`text-2xl md:text-5xl font-semibold mb-2 w-full
@@ -192,8 +245,8 @@ export default function Banner() {
   `}
 >
   {lang === "en"
-    ? "Book Your Hotel With Ease Today."
-    : "احجز فندقك بسهولة اليوم."}
+    ? (adminBanner?.titleEn || "Book Your Hotel With Ease Today.")
+    : (adminBanner?.titleAr || "احجز فندقك بسهولة اليوم.")}
 </h1>
 
 {/* Subtitle */}
@@ -207,8 +260,8 @@ export default function Banner() {
   `}
 >
   {lang === "en"
-    ? "Let us help you find the perfect stay for your Hajj and Umrah journey."
-    : "دعنا نساعدك في العثور على الإقامة المثالية لرحلة حجك وعمرتك."}
+    ? (adminBanner?.subtitleEn || "Let us help you find the perfect stay for your Hajj and Umrah journey.")
+    : (adminBanner?.subtitleAr || "دعنا نساعدك في العثور على الإقامة المثالية لرحلة حجك وعمرتك.")}
 </p>
 
 

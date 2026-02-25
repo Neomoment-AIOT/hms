@@ -4,6 +4,8 @@ import { useEffect, useState, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { FaStar, FaMapMarkerAlt, FaDownload } from "react-icons/fa";
 import { LangContext } from "@/app/lang-provider";
+import { generateBookingPDF } from "@/app/utils/generateBookingPDF";
+import { getPDFLabels } from "@/app/utils/pdfLabels";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -29,6 +31,9 @@ type BookingData = {
   checkOut: string;
   meals: Record<MealKey, boolean>;
   totalAmount: number;
+  guestName?: string;
+  email?: string;
+  roomPrice?: number;
 };
 
 /* ---------------- COMPONENT ---------------- */
@@ -55,7 +60,36 @@ export default function PaymentSuccessPage() {
     );
   }
 
-  const { roomName, roomCount, checkIn, checkOut, meals, totalAmount } = bookingData;
+  const { roomName, roomCount, checkIn, checkOut, meals, totalAmount, guestName, email } = bookingData;
+
+  const handleDownloadPDF = () => {
+    const labels = getPDFLabels(isArabic);
+    const mealTotal = mealKeys.reduce(
+      (sum, m) => sum + (meals[m] ? MEAL_PRICES[m] : 0),
+      0
+    );
+    generateBookingPDF({
+      bookingRef: "REF202503091738433773",
+      guestName: guestName || "Guest",
+      email: email || "N/A",
+      roomName,
+      roomCount,
+      checkIn,
+      checkOut,
+      hotelName: "Raffah-2",
+      hotelAddress: isArabic
+        ? "بلعقيق، طريق الملك فهد، الرياض 13515، المملكة العربية السعودية"
+        : "BeAl Aqiq, King Fahd Branch Rd, Riyadh 13515, Saudi Arabia",
+      hotelPhone: "+966 920010417",
+      rating: "3 / 5",
+      meals,
+      mealPrices: MEAL_PRICES,
+      roomPrice: totalAmount - mealTotal,
+      totalAmount,
+      isArabic,
+      labels,
+    });
+  };
 
   const selectedMeals = mealKeys.filter((meal) => meals[meal]);
   const mealTotal = mealKeys.reduce(
@@ -93,7 +127,10 @@ export default function PaymentSuccessPage() {
               <FaStar className="text-yellow-400 text-lg" /> 3 / 5
             </div>
           </div>
-          <button className="w-full md:w-auto border px-4 py-2 rounded-lg text-base flex items-center justify-center gap-2">
+          <button
+            onClick={handleDownloadPDF}
+            className="w-full md:w-auto border px-4 py-2 rounded-lg text-base flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+          >
             <FaDownload /> {isArabic ? "تحميل PDF" : "Download PDF"}
           </button>
         </div>

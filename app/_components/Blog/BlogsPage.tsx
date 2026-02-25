@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { LangContext } from "@/app/lang-provider";
 
 export default function BlogsPage() {
   const { lang } = useContext(LangContext);
   const ar = lang === "ar";
 
-  const blogs = [
+  const defaultBlogs = [
     {
       slug: "5-tips-to-find-the-best-hotels-in-makkah",
       titleEn: "5 Tips to find the best hotels in Makkah",
@@ -50,6 +50,20 @@ export default function BlogsPage() {
     },
   ];
 
+  const [blogsList, setBlogsList] = useState(defaultBlogs);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("admin_global_blogs");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBlogsList(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
   return (
     <section
       className={`bg-[#f8fafb] py-10 min-h-screen ${ar ? "direction-rtl text-right" : "text-left"}`}
@@ -57,7 +71,7 @@ export default function BlogsPage() {
     >
       <div className="max-w-[1200px] mx-auto px-4 space-y-6 md:space-y-10">
         
-        {blogs.map((b) => (
+        {blogsList.map((b) => (
           <article
             key={b.slug}
             className={`bg-white rounded-lg shadow-sm flex flex-col md:flex-row gap-6 items-center md:items-start p-4 md:p-6 transition-all hover:shadow-md

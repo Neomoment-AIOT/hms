@@ -5,6 +5,7 @@ import Footer from "./_components/footer/page";
 import Banner from "./_components/Home/Banner";
 import Hotels from "./_components/Home/hotels";
 import Offers from "./_components/Home/offers";
+import DiscoveryGrid from "./_components/Home/DiscoveryGrid";
 
 export default function Home() {
   return (
@@ -12,6 +13,7 @@ export default function Home() {
       <Header />
       <Banner />
       <Hotels />
+      <DiscoveryGrid />
       <Offers />
       <Footer />
     </div>

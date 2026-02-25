@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useContext, useEffect } from "react";
+import { useState, useRef, useContext, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import HotelList from "./Hotel_List";
@@ -47,6 +47,19 @@ export default function HotelFilter() {
       children: Number(searchParams.get("children") ?? 0),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------------- DISABLED HOTELS FILTER ------------ */
+  const enabledHotelsData = useMemo(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("admin_disabled_hotels") : null;
+      if (!raw) return hotelsData;
+      const disabledMap: Record<string, boolean> = JSON.parse(raw);
+      if (Object.keys(disabledMap).length === 0) return hotelsData;
+      return hotelsData.filter((h) => !disabledMap[String(h.id)]);
+    } catch {
+      return hotelsData;
+    }
   }, []);
 
   /* ---------------- DATE & GUEST STATE ---------------- */
@@ -182,7 +195,7 @@ export default function HotelFilter() {
   };
 
   /* ---------------- FILTER LOGIC ---------------- */
-  const filteredHotels = hotelsData.filter((hotel) => {
+  const filteredHotels = enabledHotelsData.filter((hotel) => {
     if (appliedFilters.rating !== null && hotel.rating < appliedFilters.rating) return false;
     if (hotel.price < appliedFilters.minPrice || hotel.price > appliedFilters.maxPrice) return false;
     if (appliedFilters.propertyViews.length > 0 && !appliedFilters.propertyViews.includes(hotel.propertyView))

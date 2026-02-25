@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { LangContext } from "@/app/lang-provider";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 
 type Hotel = {
   id: number;
@@ -30,18 +30,54 @@ const Offers = () => {
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
 
+  const [offersList, setOffersList] = useState(hotels);
+  useEffect(() => {
+    try {
+      // Load disabled hotels map
+      const disabledRaw = localStorage.getItem("admin_disabled_hotels");
+      const disabledMap: Record<string, boolean> = disabledRaw ? JSON.parse(disabledRaw) : {};
+
+      const stored = localStorage.getItem("admin_global_offers");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setOffersList(
+            parsed
+              .filter((h: Record<string, unknown>) => {
+                // Filter by odooId if present, otherwise by id
+                const checkId = (h.odooId as number) || (h.id as number);
+                return !disabledMap[String(checkId)];
+              })
+              .map((h: Record<string, unknown>) => ({
+                id: h.id as number,
+                nameEn: ((h.nameEn as string) || (h.name as string) || "") as string,
+                nameAr: ((h.nameAr as string) || (h.arabicName as string) || "") as string,
+                price: (h.price || 0) as number,
+                imageUrl: ((h.imageUrl as string) || (h.image as string) || "/hotel/hotel1.jpg") as string,
+              }))
+          );
+          return;
+        }
+      }
+      // Fallback: filter hardcoded list by disabled map
+      if (Object.keys(disabledMap).length > 0) {
+        setOffersList(hotels.filter((h) => !disabledMap[String(h.id)]));
+      }
+    } catch {}
+  }, []);
+
   return (
      <section className="w-full bg-gray-200" dir={isArabic ? "rtl" : "ltr"}>
           <div className="max-w-[1440px] mx-auto p-6">
-    
+
             {/* Title */}
             <h2 className={`text-3xl font-bold mb-10 ${isArabic ? "font-arabic text-right" : ""}`}>
                {isArabic ? "فنادق تم اختيارها من أجلك" : "Hotels selected for you"}
             </h2>
-    
+
             {/* Hotels Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
-              {hotels.map((hotel) => (
+              {offersList.map((hotel) => (
                 <div
                   key={hotel.id}
                   className={`relative rounded-lg overflow-hidden shadow-lg group hover:shadow-2xl transition-shadow h-80 md:h-96 ${isArabic ? "text-right" : "text-left"}`}

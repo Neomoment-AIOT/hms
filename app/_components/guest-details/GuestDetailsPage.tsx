@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FaStar, FaDownload, FaMapMarkerAlt, FaEnvelope } from "react-icons/fa";
 import { format, addDays } from "date-fns";
 import { LangContext } from "@/app/lang-provider";
+import { generateBookingPDF } from "@/app/utils/generateBookingPDF";
+import { getPDFLabels } from "@/app/utils/pdfLabels";
 
 const countries = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -65,6 +67,10 @@ export default function GuestDetailsPage() {
     if (outDate) setCheckOut(new Date(outDate + "T00:00:00"));
   }, [searchParams]);
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+
   const [meals, setMeals] = useState({
     breakfast: false,
     lunch: false,
@@ -84,6 +90,31 @@ export default function GuestDetailsPage() {
   const services = 300;
   const grandTotal = roomTotal +  mealsTotal;
 
+  const handleDownloadPDF = () => {
+    const labels = getPDFLabels(isArabic);
+    generateBookingPDF({
+      bookingRef: "REF202503091738433773",
+      guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
+      email: email || "N/A",
+      roomName: selectedRoom?.name || "N/A",
+      roomCount: count,
+      checkIn: format(checkIn, "dd MMM yyyy"),
+      checkOut: format(checkOut, "dd MMM yyyy"),
+      hotelName: "Raffah-2",
+      hotelAddress: isArabic
+        ? "بلعقيق، طريق الملك فهد، الرياض 13515، المملكة العربية السعودية"
+        : "BeAl Aqiq, King Fahd Branch Rd, Riyadh 13515, Saudi Arabia",
+      hotelPhone: "+966 920010417",
+      rating: "3 / 5",
+      meals,
+      mealPrices: MEAL_PRICES,
+      roomPrice: roomTotal,
+      totalAmount: grandTotal,
+      isArabic,
+      labels,
+    });
+  };
+
   const handleContinueToPayment = () => {
   const bookingData = {
     roomName: selectedRoom?.name,
@@ -92,6 +123,9 @@ export default function GuestDetailsPage() {
     checkOut: format(checkOut, "yyyy-MM-dd"),
     meals,
     totalAmount: roomTotal + mealsTotal,
+    guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
+    email: email || "N/A",
+    roomPrice: roomTotal,
   };
 
   sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
@@ -124,6 +158,8 @@ export default function GuestDetailsPage() {
               <input
                 placeholder={isArabic ? "اسمك الأول" : "Your first name"}
                 className="mt-1 w-full border rounded px-3 py-2"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
               />
             </div>
             <div>
@@ -131,6 +167,8 @@ export default function GuestDetailsPage() {
               <input
                 placeholder={isArabic ? "اسم عائلتك" : "Your last name"}
                 className="mt-1 w-full border rounded px-3 py-2"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
               />
             </div>
           </div>
@@ -144,6 +182,8 @@ export default function GuestDetailsPage() {
                 <input
                   placeholder={isArabic ? "بريدك الإلكتروني" : "Your email"}
                   className={`w-full border rounded px-3 py-2 ${isArabic ? "pr-10" : "pl-10"}`}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -225,8 +265,11 @@ export default function GuestDetailsPage() {
               </div>
             </div>
 
-            <button className="border px-2 py-1 rounded text-sm flex items-center gap-1">
-              <FaDownload /> Download PDF
+            <button
+              onClick={handleDownloadPDF}
+              className="border px-2 py-1 rounded text-sm flex items-center gap-1 hover:bg-gray-50 transition-colors"
+            >
+              <FaDownload /> {isArabic ? "تحميل PDF" : "Download PDF"}
             </button>
           </div>
 
