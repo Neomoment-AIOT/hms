@@ -186,7 +186,7 @@ export default function Footer() {
       
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
         <p>
-          {isArabic ? `جميع الحقوق محفوظة © ${new Date().getFullYear()} الرفاع` : `Copyright © ${new Date().getFullYear()} AL-Riffa`}
+          {isArabic ? `جميع الحقوق محفوظة © ${new Date().getFullYear()} الرفاع` : `Copyright © ${new Date().getFullYear()} AL-Riffa*`}
         </p>
 
         <div className={`flex mt-4 md:mt-0 ${isArabic ? "flex-row-reverse space-x-reverse space-x-6" : "space-x-4"}`}>
