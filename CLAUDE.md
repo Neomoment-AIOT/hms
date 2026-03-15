@@ -18,3 +18,10 @@
 - **Done**: Added CLAUDE.md for session continuity and cross-PC memory.
 - **Left off**: CLAUDE.md committed and pushed.
 - **Next**: Begin active development.
+
+## Plugin: context-mode
+- `mksglu/context-mode` is installed globally for local session continuity
+- It handles local memory (SQLite) automatically — no action needed
+- Cross-PC memory is handled via CLAUDE.md Session Log + git push/pull
+- Install on new PC: `/plugin marketplace add mksglu/context-mode` then `/plugin install context-mode@context-mode`
+
