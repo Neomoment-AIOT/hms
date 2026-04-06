@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useContext, MouseEvent } from "react";
+import React, { useState, useEffect, useContext, MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { MdOutlineCalendarToday, MdOutlineMailOutline } from "react-icons/md";
 import { HiOutlineMail } from "react-icons/hi";
@@ -29,6 +29,10 @@ export default function RetrieveBooking({
   const isArabic = lang === "ar";
   const router = useRouter();
 
+  const [emailInput, setEmailInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleModalClick = (e: MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
   };
@@ -38,7 +42,45 @@ export default function RetrieveBooking({
       onClose();
       router.push("/my-bookings");
     }
-  }, [user]);
+  }, [user, onClose, router]);
+
+  const handleRetrieve = async () => {
+    if (!emailInput) {
+      setError(isArabic ? "البريد الإلكتروني مطلوب" : "Email is required");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/bookings/retrieve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partner_email: emailInput }),
+      });
+
+      const json = await res.json();
+
+      if (json.ok) {
+        const totalBookings = (json.data.bookings?.length || 0) + (json.data.group_bookings?.length || 0);
+        if (totalBookings > 0) {
+          // Store email temporarily so my-bookings can display
+          sessionStorage.setItem("retrieve_email", emailInput);
+          onClose();
+          router.push("/my-bookings");
+        } else {
+          setError(isArabic ? "لم يتم العثور على حجوزات لهذا البريد" : "No bookings found for this email");
+        }
+      } else {
+        setError(json.error || (isArabic ? "فشل استرداد الحجز" : "Failed to retrieve bookings"));
+      }
+    } catch {
+      setError(isArabic ? "خطأ في الشبكة" : "Network error");
+    }
+
+    setLoading(false);
+  };
 
   if (!isOpen) return null;
 
@@ -48,7 +90,7 @@ export default function RetrieveBooking({
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-3xl shadow-xl w-full max-w-md p-8 relative ${
+        className={`bg-white text-gray-900 rounded-3xl shadow-xl w-full max-w-md p-8 relative ${
           isArabic ? "font-arabic" : ""
         }`}
         onClick={handleModalClick}
@@ -104,8 +146,11 @@ export default function RetrieveBooking({
                 />
                 <input
                   type="email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
                   placeholder={isArabic ? "البريد الإلكتروني" : "Your email"}
-                  className={`w-full bg-[#F3F4F6] rounded-2xl py-5 px-4 ${
+                  disabled={loading}
+                  className={`w-full bg-[#F3F4F6] rounded-2xl py-5 px-4 disabled:opacity-50 ${
                     isArabic ? "pr-14 text-right" : "pl-14 text-left"
                   }`}
                 />
@@ -117,9 +162,18 @@ export default function RetrieveBooking({
               </p>
             </div>
 
+            {/* Error */}
+            {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+
             {/* Buttons */}
-            <button className={`w-full py-4 bg-linear-to-r from-[#248B96] to-[#0D4047] text-white font-bold rounded-2xl mb-3 ${isArabic ? "font-arabic" : ""}`}>
-              {isArabic ? "استرداد الحجز" : "Retrieve my booking"}
+            <button
+              onClick={handleRetrieve}
+              disabled={loading}
+              className={`w-full py-4 bg-linear-to-r from-[#248B96] to-[#0D4047] text-white font-bold rounded-2xl mb-3 disabled:opacity-50 ${isArabic ? "font-arabic" : ""}`}
+            >
+              {loading
+                ? (isArabic ? "جاري البحث..." : "Searching...")
+                : (isArabic ? "استرداد الحجز" : "Retrieve my booking")}
             </button>
 
             <button

@@ -6,37 +6,18 @@ import { FaUser } from "react-icons/fa";
 import Link from "next/link";
 import MyBookingsPage from "../my-bookings/page";
 import MyReservationsPage from "../_components/my-reservations/MyReservationsPage";
+import { signOut } from "@/app/utils/auth";
 
-const countries = [
-  "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia",
-  "Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium",
-  "Belize","Benin","Bhutan","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Brunei","Bulgaria",
-  "Burkina Faso","Burundi","Cabo Verde","Cambodia","Cameroon","Canada","Central African Republic","Chad",
-  "Chile","China","Colombia","Comoros","Congo (Congo-Brazzaville)","Costa Rica","Croatia","Cuba","Cyprus",
-  "Czechia (Czech Republic)","Democratic Republic of the Congo","Denmark","Djibouti","Dominica","Dominican Republic",
-  "Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini (fmr. 'Swaziland')","Ethiopia",
-  "Fiji","Finland","France","Gabon","Gambia","Georgia","Germany","Ghana","Greece","Grenada","Guatemala","Guinea",
-  "Guinea-Bissau","Guyana","Haiti","Holy See","Honduras","Hungary","Iceland","India","Indonesia","Iran","Iraq",
-  "Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Kuwait","Kyrgyzstan",
-  "Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg","Madagascar",
-  "Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico","Micronesia",
-  "Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar (formerly Burma)","Namibia","Nauru",
-  "Nepal","Netherlands","New Zealand","Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman",
-  "Pakistan","Palau","Palestine State","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal",
-  "Qatar","Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa",
-  "San Marino","Sao Tome and Principe","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore",
-  "Slovakia","Slovenia","Solomon Islands","Somalia","South Africa","South Korea","South Sudan","Spain","Sri Lanka",
-  "Sudan","Suriname","Sweden","Switzerland","Syria","Tajikistan","Tanzania","Thailand","Timor-Leste","Togo","Tonga",
-  "Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom",
-  "United States of America","Uruguay","Uzbekistan","Vanuatu","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"
-];
+type CountryOption = {
+  id: number;
+  country: string;
+};
 
 export default function AccountPage() {
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
 
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-
   const [activePage, setActivePage] = useState("profile");
 
   const [firstName, setFirstName] = useState("");
@@ -44,36 +25,134 @@ export default function AccountPage() {
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [country, setCountry] = useState("");
+  const [countryId, setCountryId] = useState<number | null>(null);
   const [city, setCity] = useState("");
   const [zip, setZip] = useState("");
   const [currentLocation, setCurrentLocation] = useState("");
   const [bio, setBio] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Load profile from API
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    const loadProfile = async () => {
+      try {
+        const res = await fetch("/api/account/profile");
+        const json = await res.json();
+
+        if (json.ok && json.data) {
+          const d = json.data;
+          const fullName = (d.name || d.complete_name || "").split(" ");
+          setFirstName(fullName[0] || "");
+          setLastName(fullName.slice(1).join(" ") || "");
+          setEmail(d.email || "");
+          setCity(d.city || "");
+          setZip(d.zip || "");
+          setCurrentLocation(d.street || "");
+          setCountryId(d.country_id || null);
+
+          setUser({ name: d.name || "", email: d.email || "" });
+          setProfileLoading(false);
+          return;
+        }
+      } catch {
+        // API failed, try localStorage fallback
+      }
+
+      // Fallback: localStorage
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        const nameParts = (parsed.name || "").split(" ");
+        setFirstName(nameParts[0] || "");
+        setLastName(nameParts.slice(1).join(" ") || "");
+        setEmail(parsed.email || "");
+      }
+      setProfileLoading(false);
+    };
+
+    loadProfile();
   }, []);
 
-  const handleLogout = () => {
+  // Load countries from API
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const res = await fetch("/api/geo/countries-states");
+        const json = await res.json();
+
+        if (json.ok && Array.isArray(json.data)) {
+          setCountries(
+            json.data.map((c: { id: number; country: string }) => ({
+              id: c.id,
+              country: c.country,
+            }))
+          );
+
+          // Set initial country selection from profile
+          if (countryId) {
+            const match = json.data.find((c: { id: number }) => c.id === countryId);
+            if (match) setCountry(String(match.id));
+          }
+        }
+      } catch {
+        // Countries API failed — leave empty
+      }
+    };
+
+    loadCountries();
+  }, [countryId]);
+
+  const handleLogout = async () => {
+    await signOut();
     setUser(null);
-    localStorage.removeItem("user");
     window.location.href = "/";
   };
 
-  const handleSave = () => {
-    const updatedUser = { name: `${firstName} ${lastName}`, email };
-    setUser(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-    alert(isArabic ? "تم حفظ البيانات!" : "Saved successfully!");
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/account/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${firstName} ${lastName}`.trim(),
+          city,
+          zip,
+          street: currentLocation,
+          country_id: country ? parseInt(country) : undefined,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (json.ok) {
+        const updatedUser = { name: `${firstName} ${lastName}`.trim(), email };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        alert(isArabic ? "تم حفظ البيانات!" : "Saved successfully!");
+      } else {
+        alert(json.error || (isArabic ? "فشل الحفظ" : "Save failed"));
+      }
+    } catch {
+      alert(isArabic ? "فشل الحفظ" : "Save failed");
+    }
+    setSaving(false);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setPreviewImage(URL.createObjectURL(file));
   };
+
+  if (profileLoading) {
+    return <div className="p-8 text-gray-500">{isArabic ? "جاري التحميل..." : "Loading..."}</div>;
+  }
 
   if (!user) return <p className="p-8 text-red-500">{isArabic ? "أنت لست مسجلاً الدخول" : "You are not logged in."}</p>;
 
@@ -111,7 +190,7 @@ export default function AccountPage() {
         </aside>
         {activePage === "profile" && (
   <>
-    
+
       {/* Main content */}
         <main className="flex-1 bg-white p-6 md:p-8">
           <h1 className="text-2xl font-bold mb-6">{isArabic ? "الإعدادات" : "Setting"}</h1>
@@ -160,7 +239,7 @@ export default function AccountPage() {
                 <label className="block text-sm font-medium">{isArabic ? "الدولة" : "Country"}</label>
                 <select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full border rounded p-2">
                   <option value="" disabled>{isArabic ? "اختر الدولة" : "Select a country"}</option>
-                  {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                  {countries.map(c => <option key={c.id} value={c.id}>{c.country}</option>)}
                 </select>
               </div>
 
@@ -188,7 +267,9 @@ export default function AccountPage() {
 
             {/* Buttons */}
             <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 mt-4">
-              <button onClick={handleSave} className="bg-linear-to-r from-[#1F8593] to-[#052E39] text-white px-4 py-2 rounded">{isArabic ? "حفظ" : "Save"}</button>
+              <button onClick={handleSave} disabled={saving} className="bg-linear-to-r from-[#1F8593] to-[#052E39] text-white px-4 py-2 rounded disabled:opacity-50">
+                {saving ? (isArabic ? "جاري الحفظ..." : "Saving...") : (isArabic ? "حفظ" : "Save")}
+              </button>
               <button onClick={() => window.location.reload()} className="border px-4 py-2 rounded">{isArabic ? "إلغاء" : "Cancel"}</button>
             </div>
 

@@ -11,24 +11,8 @@ type Hotel = {
   nameAr: string;
   price: number;
   imageUrl: string;
+  rating: number;
 };
-
-const hotels: Hotel[] = [
-  { id: 1, nameEn: "Kudi Tower", nameAr: "كدي تاور", price: 250, imageUrl: "/hotel/hotel1.jpg" },
-  { id: 2, nameEn: "Al-Refaa Al-Sadd Hotel", nameAr: "فندق الرفاع السد", price: 290, imageUrl: "/hotel/hotel2.jpeg" },
-  { id: 3, nameEn: "Karam Al-Refaa Hotel", nameAr: "فندق كرم الرفاع", price: 190, imageUrl: "/hotel/hotel3.jpeg" },
-  { id: 4, nameEn: "Barkat Al-Refaa Hotel", nameAr: "فندق بركة الرفاع", price: 224, imageUrl: "/hotel/hotel4.jpeg" },
-  { id: 5, nameEn: "Nasmah Al-Khaiir Hotel", nameAr: "فندق نسمات الخير", price: 184, imageUrl: "/hotel/hotel5.jpeg" },
-  { id: 6, nameEn: "Al-Fajr Al-Badee 1", nameAr: "الفجر البديع 1", price: 204, imageUrl: "/hotel/hotel6.jpeg" },
-  { id: 7, nameEn: "Al-Refaa Ri'a Baksh Hotel", nameAr: "فندق الرفاع ريع بخش", price: 180, imageUrl: "/hotel/hotel7.jpeg" },
-  { id: 8, nameEn: "Rawaabi Al-Salam Hotel", nameAr: "فندق روابي السلام", price: 154, imageUrl: "/hotel/hotel8.jpeg" },
-  { id: 9, nameEn: "Vivian Al-Jameeza Hotel", nameAr: "فندق فيفيان الجميزة", price: 150, imageUrl: "/hotel/hotel9.jpeg" },
-  { id: 10, nameEn: "Vivian Al-Maabda Hotel", nameAr: "فندق فيفيان المعابدة", price: 142, imageUrl: "/hotel/hotel10.jpeg" },
-  { id: 11, nameEn: "Al-Rafa Al-Aziza Hotel", nameAr: "فندق الرفاع العزيزية", price: 160, imageUrl: "/hotel/hotel11.jpeg" },
-  { id: 12, nameEn: "Wahet Al-Refaa Hotel", nameAr: "فندق واحة الرفاع", price: 170, imageUrl: "/hotel/hotel12.jpeg" },
-  { id: 13, nameEn: "Vivian Al-Aziza Hotel", nameAr: "فندق فيفيان العزيزية", price: 152, imageUrl: "/hotel/hotel13.jpeg" },
-  { id: 14, nameEn: "Tariq Alhajrih Hotel", nameAr: "فندق طريق الهجره", price: 232, imageUrl: "/hotel/hotel14.jpeg" },
-];
 
 const toArabicNumbers = (num: number) =>
   num.toString().replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[parseInt(d)]);
@@ -38,37 +22,83 @@ export default function Hotels() {
   const isArabic = lang === "ar";
   const router = useRouter();
 
-  const [hotelsList, setHotelsList] = useState(hotels);
-  useEffect(() => {
-    try {
-      // Load disabled hotels map
-      const disabledRaw = localStorage.getItem("admin_disabled_hotels");
-      const disabledMap: Record<string, boolean> = disabledRaw ? JSON.parse(disabledRaw) : {};
+  const [hotelsList, setHotelsList] = useState<Hotel[]>([]);
+  const [loading, setLoading] = useState(true);
 
-      const stored = localStorage.getItem("admin_odoo_hotels");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+  useEffect(() => {
+    const fetchHotels = async () => {
+      try {
+        const res = await fetch("/api/hotels");
+        const json = await res.json();
+
+        if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
           setHotelsList(
-            parsed
-              .filter((h: Record<string, unknown>) => !disabledMap[String(h.id)])
-              .map((h: Record<string, unknown>) => ({
-                id: h.id as number,
-                nameEn: ((h.name as string) || (h.nameEn as string) || "") as string,
-                nameAr: ((h.arabicName as string) || (h.nameAr as string) || "") as string,
-                price: (h.price || 0) as number,
-                imageUrl: ((h.image as string) || (h.imageUrl as string) || "/hotel/hotel1.jpg") as string,
-              }))
+            json.data.map((h: Record<string, unknown>) => ({
+              id: h.id as number,
+              nameEn: (h.name as string) || "",
+              nameAr: (h.name as string) || "", // Odoo returns single name; Arabic TBD
+              price: (h.starting_price as number) || 0,
+              imageUrl: h.logo
+                ? `data:image/png;base64,${h.logo}`
+                : "/hotel/hotel1.jpg",
+              rating: (h.star_rating as number) || 0,
+            }))
           );
+          setLoading(false);
           return;
         }
+      } catch {
+        // API failed, fall through to fallback
       }
-      // Fallback: filter hardcoded list by disabled map
-      if (Object.keys(disabledMap).length > 0) {
-        setHotelsList(hotels.filter((h) => !disabledMap[String(h.id)]));
-      }
-    } catch {}
+
+      // Fallback: try localStorage (admin-synced hotels)
+      try {
+        const disabledRaw = localStorage.getItem("admin_disabled_hotels");
+        const disabledMap: Record<string, boolean> = disabledRaw ? JSON.parse(disabledRaw) : {};
+
+        const stored = localStorage.getItem("admin_odoo_hotels");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setHotelsList(
+              parsed
+                .filter((h: Record<string, unknown>) => !disabledMap[String(h.id)])
+                .map((h: Record<string, unknown>) => ({
+                  id: h.id as number,
+                  nameEn: ((h.name as string) || (h.nameEn as string) || "") as string,
+                  nameAr: ((h.arabicName as string) || (h.nameAr as string) || "") as string,
+                  price: (h.price || 0) as number,
+                  imageUrl: ((h.image as string) || (h.imageUrl as string) || "/hotel/hotel1.jpg") as string,
+                  rating: (h.rating || 0) as number,
+                }))
+            );
+          }
+        }
+      } catch {}
+      setLoading(false);
+    };
+
+    fetchHotels();
   }, []);
+
+  if (loading) {
+    return (
+      <section className="w-full bg-white" dir={isArabic ? "rtl" : "ltr"}>
+        <div className="max-w-[1440px] mx-auto p-6">
+          <h2 className={`text-3xl font-bold mb-10 ${isArabic ? "font-arabic text-right" : ""}`}>
+            {isArabic ? "عروض خاصة منّا لكم" : "Special offers from us to you"}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-80 md:h-96 rounded-lg bg-gray-200 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (hotelsList.length === 0) return null;
 
   return (
     <section className="w-full bg-white" dir={isArabic ? "rtl" : "ltr"}>
@@ -108,7 +138,9 @@ export default function Hotels() {
 
                 <div className="flex items-center justify-between mt-2 text-xs">
                   <span className={isArabic ? "font-arabic" : ""}>
-                    {isArabic ? "بدون تقييمات ★" : "★ No ratings"}
+                    {hotel.rating > 0
+                      ? `★ ${hotel.rating.toFixed(1)}`
+                      : (isArabic ? "بدون تقييمات ★" : "★ No ratings")}
                   </span>
 
                   <span className={`bg-[#003243] px-3 py-1 rounded text-sm flex items-center gap-1.5 ${isArabic ? "font-arabic" : ""}`}>
