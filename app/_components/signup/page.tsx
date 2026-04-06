@@ -3,10 +3,11 @@
 import { useState, MouseEvent, useContext } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { LangContext } from "@/app/lang-provider";
+import { signUp } from "@/app/utils/auth";
 
 interface SignUpProps {
     onClose: () => void;
-    openSignIn: () => void; // To switch back to sign in
+    openSignIn: () => void;
 }
 
 export default function SignUp({ onClose, openSignIn }: SignUpProps) {
@@ -19,12 +20,13 @@ export default function SignUp({ onClose, openSignIn }: SignUpProps) {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleModalClick = (e: MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!name || !email || !password) {
@@ -34,7 +36,20 @@ export default function SignUp({ onClose, openSignIn }: SignUpProps) {
         }
 
         setError("");
-        setSuccess(isArabic ? "تم إنشاء الحساب بنجاح!" : "Account created successfully!");
+        setSuccess("");
+        setLoading(true);
+
+        const result = await signUp(email, password, name);
+
+        setLoading(false);
+
+        if (result.ok) {
+            setSuccess(isArabic ? "تم إنشاء الحساب بنجاح! يمكنك تسجيل الدخول الآن." : "Account created successfully! You can now sign in.");
+            // Auto-switch to sign in after 2 seconds
+            setTimeout(() => openSignIn(), 2000);
+        } else {
+            setError(result.error);
+        }
     };
 
     return (
@@ -74,8 +89,9 @@ export default function SignUp({ onClose, openSignIn }: SignUpProps) {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
+                            disabled={loading}
                             placeholder={isArabic ? "أدخل اسمك" : "Enter your name"}
-                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300"
+                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300 disabled:opacity-50"
                         />
                     </div>
 
@@ -89,8 +105,9 @@ export default function SignUp({ onClose, openSignIn }: SignUpProps) {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
+                            disabled={loading}
                             placeholder={isArabic ? "أدخل بريدك الإلكتروني" : "Enter your email"}
-                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300"
+                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300 disabled:opacity-50"
                         />
                     </div>
 
@@ -104,8 +121,9 @@ export default function SignUp({ onClose, openSignIn }: SignUpProps) {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                            disabled={loading}
                             placeholder={isArabic ? "أدخل كلمة المرور" : "Enter your password"}
-                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300 pr-10"
+                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300 pr-10 disabled:opacity-50"
                         />
 
                         <button
@@ -128,9 +146,12 @@ export default function SignUp({ onClose, openSignIn }: SignUpProps) {
                     {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full bg-linear-to-r from-[#1F8593] to-[#052E39] text-white cursor-pointer py-2 rounded-lg transition"
+                        disabled={loading}
+                        className="w-full bg-linear-to-r from-[#1F8593] to-[#052E39] text-white cursor-pointer py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isArabic ? "إنشاء حساب" : "Sign Up"}
+                        {loading
+                            ? (isArabic ? "جاري إنشاء الحساب..." : "Creating account...")
+                            : (isArabic ? "إنشاء حساب" : "Sign Up")}
                     </button>
                 </form>
 
