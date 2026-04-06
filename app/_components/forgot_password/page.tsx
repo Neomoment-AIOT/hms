@@ -21,7 +21,7 @@ export default function ForgotPassword({ onClose, openSignIn }: ForgotPasswordPr
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
             <div
-                className={`bg-white rounded-2xl shadow-xl w-full max-w-md p-8 relative ${isArabic ? "font-arabic" : ""}`}
+                className={`bg-white text-gray-900 rounded-2xl shadow-xl w-full max-w-md p-8 relative ${isArabic ? "font-arabic" : ""}`}
                 onClick={handleModalClick}
                 dir={isArabic ? "rtl" : "ltr"}
             >

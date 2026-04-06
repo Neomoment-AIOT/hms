@@ -43,7 +43,7 @@ export default function SignUp({ onClose, openSignIn }: SignUpProps) {
             onClick={onClose}
         >
             <div
-                className={`bg-white rounded-2xl shadow-xl w-full max-w-md p-8 relative ${
+                className={`bg-white text-gray-900 rounded-2xl shadow-xl w-full max-w-md p-8 relative ${
                     isArabic ? "font-arabic" : ""
                 }`}
                 onClick={handleModalClick}
