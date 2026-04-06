@@ -18,7 +18,9 @@ export default function AdminLoginPage() {
     }
   }, [router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -27,7 +29,10 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const success = adminLogin(email, password);
+    setLoading(true);
+    const success = await adminLogin(email, password);
+    setLoading(false);
+
     if (success) {
       router.push("/admin/dashboard");
     } else {
