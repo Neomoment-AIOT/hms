@@ -114,7 +114,14 @@ export default function Hotels() {
           {hotelsList.map((hotel) => (
             <div
               key={hotel.id}
-              onClick={() => router.push(`/RoomChoices`)}
+              onClick={() => {
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const ci = today.toISOString().split("T")[0];
+                const co = tomorrow.toISOString().split("T")[0];
+                router.push(`/RoomChoices?hotelId=${hotel.id}&checkIn=${ci}&checkOut=${co}&room=1&adult=1&children=0`);
+              }}
               className={`relative h-80 md:h-96 rounded-lg overflow-hidden shadow-lg cursor-pointer
               group hover:shadow-2xl transition-all ${isArabic ? "text-right" : "text-left"}`}
             >

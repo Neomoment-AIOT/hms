@@ -51,13 +51,20 @@ export default function GuestDetailsPage() {
   const router = useRouter();
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
-  const roomId = Number(searchParams.get("roomId"));
-  const count = Number(searchParams.get("count")) || 1;
 
-  const selectedRoom = roomsData.find((r) => r.id === roomId);
+  // Read expanded URL params
+  const hotelId = searchParams.get("hotelId");
+  const roomTypeId = Number(searchParams.get("roomTypeId") || searchParams.get("roomId"));
+  const count = Number(searchParams.get("count")) || 1;
+  const adultsParam = searchParams.get("adults") || "1";
+  const childrenParam = searchParams.get("children") || "0";
+
+  const selectedRoom = roomsData.find((r) => r.id === roomTypeId);
 
   const [checkIn, setCheckIn] = useState<Date>(new Date());
   const [checkOut, setCheckOut] = useState<Date>(addDays(new Date(), 1));
+  const [apiCountries, setApiCountries] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const inDate = searchParams.get("checkIn");
@@ -66,6 +73,20 @@ export default function GuestDetailsPage() {
     if (inDate) setCheckIn(new Date(inDate + "T00:00:00"));
     if (outDate) setCheckOut(new Date(outDate + "T00:00:00"));
   }, [searchParams]);
+
+  // Fetch countries from API
+  useEffect(() => {
+    fetch("/api/geo/countries-states")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.ok && Array.isArray(json.data)) {
+          setApiCountries(json.data.map((c: { country: string }) => c.country));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const displayCountries = apiCountries.length > 0 ? apiCountries : countries;
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -115,22 +136,74 @@ export default function GuestDetailsPage() {
     });
   };
 
-  const handleContinueToPayment = () => {
-  const bookingData = {
-    roomName: selectedRoom?.name,
-    roomCount: count,
-    checkIn: format(checkIn, "yyyy-MM-dd"),
-    checkOut: format(checkOut, "yyyy-MM-dd"),
-    meals,
-    totalAmount: roomTotal + mealsTotal,
-    guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
-    email: email || "N/A",
-    roomPrice: roomTotal,
-  };
+  const handleContinueToPayment = async () => {
+    const bookingData = {
+      roomName: selectedRoom?.name,
+      roomCount: count,
+      checkIn: format(checkIn, "yyyy-MM-dd"),
+      checkOut: format(checkOut, "yyyy-MM-dd"),
+      meals,
+      totalAmount: roomTotal + mealsTotal,
+      guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
+      email: email || "N/A",
+      roomPrice: roomTotal,
+      hotelId: hotelId ? Number(hotelId) : undefined,
+      bookingId: undefined as string | undefined,
+    };
 
-  sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
-  router.push("/PayementSuccess");
-};
+    // Try to create booking via API if hotelId is present
+    if (hotelId) {
+      setSubmitting(true);
+      try {
+        const res = await fetch("/api/bookings/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            check_in_date: format(checkIn, "yyyy-MM-dd"),
+            check_out_date: format(checkOut, "yyyy-MM-dd"),
+            hotel_id: Number(hotelId),
+            customer_details: {
+              first_name: firstName || "Guest",
+              last_name: lastName || "",
+              email: email || "",
+              mobile: "",
+            },
+            rooms: [{
+              room_type_id: roomTypeId,
+              pax: Number(adultsParam) + Number(childrenParam),
+              adults: Number(adultsParam),
+              children: Number(childrenParam),
+            }],
+          }),
+        });
+
+        const json = await res.json();
+        setSubmitting(false);
+
+        if (json.ok) {
+          // Extract booking ID from response
+          const bid = json.data?.booking_id || json.data?.id || json.data?.name || "";
+          bookingData.bookingId = String(bid);
+          sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
+          router.push(`/PayementSuccess?bookingId=${bid}`);
+          return;
+        } else if (res.status === 401) {
+          alert(isArabic ? "يرجى تسجيل الدخول أولاً لإتمام الحجز" : "Please sign in first to complete your booking");
+          return;
+        } else {
+          alert(json.error || (isArabic ? "فشل تأكيد الحجز" : "Booking confirmation failed"));
+          return;
+        }
+      } catch {
+        setSubmitting(false);
+        // Fall through to sessionStorage fallback
+      }
+    }
+
+    // Fallback: store in sessionStorage (no API)
+    sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
+    router.push("/PayementSuccess");
+  };
 
 
   return (
@@ -192,8 +265,8 @@ export default function GuestDetailsPage() {
               <label className="text-sm font-medium">{isArabic ? "الدولة" : "Country"}</label>
               <select className="mt-1 w-full border rounded px-3 py-2">
                 <option>{isArabic ? "دولتك" : "Your country"}</option>
-                {countries.map((country) => (
-                  <option key={country}>{country}</option>
+                {displayCountries.map((c) => (
+                  <option key={c}>{c}</option>
                 ))}
               </select>
             </div>
@@ -348,10 +421,12 @@ export default function GuestDetailsPage() {
             </div>
             <button
   onClick={handleContinueToPayment}
-  className="w-full mt-6 bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded"
+  disabled={submitting}
+  className="w-full mt-6 bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded disabled:opacity-50"
 >
-
-              {isArabic ? "المتابعة للدفع" : "Continue to payment"}
+              {submitting
+                ? (isArabic ? "جاري تأكيد الحجز..." : "Confirming booking...")
+                : (isArabic ? "المتابعة للدفع" : "Continue to payment")}
             </button>
           </div>
         </div>

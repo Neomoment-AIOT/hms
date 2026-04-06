@@ -3,7 +3,8 @@
 import { useContext } from "react";
 import { useRouter } from "next/navigation";
 import { LangContext } from "@/app/lang-provider";
-import { MapPinIcon } from "lucide-react"; // optional icon library, make sure lucide-react is installed
+import { MapPinIcon } from "lucide-react";
+import { format } from "date-fns";
 
 type Hotel = {
   id: number;
@@ -20,18 +21,41 @@ type Hotel = {
   freeWifi?: boolean;
 };
 
-type Props = {
-  hotels: Hotel[];
+type GuestDetails = {
+  room: number;
+  adult: number;
+  children: number;
 };
 
-// Helper function to convert numbers to Arabic-Indic digits
+type Props = {
+  hotels: Hotel[];
+  checkIn?: Date;
+  checkOut?: Date;
+  guestDetails?: GuestDetails;
+};
+
 function toArabicNumber(num: number) {
   return num.toString().replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[+d]);
 }
 
-export default function HotelList({ hotels }: Props) {
+export default function HotelList({ hotels, checkIn, checkOut, guestDetails }: Props) {
   const { lang } = useContext(LangContext);
   const router = useRouter();
+
+  const handleSelectHotel = (hotelId: number) => {
+    const params = new URLSearchParams();
+    params.set("hotelId", String(hotelId));
+
+    if (checkIn) params.set("checkIn", format(checkIn, "yyyy-MM-dd"));
+    if (checkOut) params.set("checkOut", format(checkOut, "yyyy-MM-dd"));
+    if (guestDetails) {
+      params.set("room", String(guestDetails.room));
+      params.set("adult", String(guestDetails.adult));
+      params.set("children", String(guestDetails.children));
+    }
+
+    router.push(`/RoomChoices?${params.toString()}`);
+  };
 
   if (hotels.length === 0)
     return (
@@ -90,8 +114,9 @@ export default function HotelList({ hotels }: Props) {
 
             {/* Button */}
             <button
-            onClick={() => router.push("/RoomChoices")}
-            className="w-full bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded-lg hover:opacity-90 transition">
+              onClick={() => handleSelectHotel(hotel.id)}
+              className="w-full bg-linear-to-r from-[#1F8593] to-[#052E39] text-white py-2 rounded-lg hover:opacity-90 transition"
+            >
               {lang === "ar" ? "اعرض غرفتك" : "See your room"}
             </button>
           </div>

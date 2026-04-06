@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useContext } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FaStar, FaMapMarkerAlt, FaDownload } from "react-icons/fa";
 import { LangContext } from "@/app/lang-provider";
 import { generateBookingPDF } from "@/app/utils/generateBookingPDF";
@@ -34,12 +34,15 @@ type BookingData = {
   guestName?: string;
   email?: string;
   roomPrice?: number;
+  bookingId?: string;
+  hotelId?: number;
 };
 
 /* ---------------- COMPONENT ---------------- */
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
 
@@ -49,8 +52,14 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     const storedData = sessionStorage.getItem("bookingData");
-    if (storedData) setBookingData(JSON.parse(storedData));
-  }, []);
+    if (storedData) {
+      const parsed = JSON.parse(storedData);
+      // Merge bookingId from URL if present
+      const urlBookingId = searchParams.get("bookingId");
+      if (urlBookingId) parsed.bookingId = urlBookingId;
+      setBookingData(parsed);
+    }
+  }, [searchParams]);
 
   if (!bookingData) {
     return (
@@ -69,7 +78,7 @@ export default function PaymentSuccessPage() {
       0
     );
     generateBookingPDF({
-      bookingRef: "REF202503091738433773",
+      bookingRef: bookingData?.bookingId || "REF202503091738433773",
       guestName: guestName || "Guest",
       email: email || "N/A",
       roomName,
@@ -148,7 +157,7 @@ export default function PaymentSuccessPage() {
         <div className="text-sm md:text-base space-y-4">
           <div className="flex justify-between gap-4">
             <span className="shrink-0">{isArabic ? "مرجع الحجز" : "Booking Ref."}</span>
-            <span className="truncate">REF202503091738433773</span>
+            <span className="truncate">{bookingData?.bookingId || "REF202503091738433773"}</span>
           </div>
 
           {/* Meal Summary */}

@@ -96,6 +96,56 @@ export default function HotelFilter() {
 
   const [appliedFilters, setAppliedFilters] = useState<Filters>(filters);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [apiHotels, setApiHotels] = useState<typeof hotelsData | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  /* ---------------- API SEARCH ---------------- */
+  const handleSearchHotels = async () => {
+    if (!arrival || !departure) return;
+    setSearching(true);
+    try {
+      const res = await fetch("/api/hotels/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checkin_date: format(arrival, "yyyy-MM-dd"),
+          checkout_date: format(departure, "yyyy-MM-dd"),
+          room_count: guestDetails.room || 1,
+          adult_count: guestDetails.adult || 1,
+        }),
+      });
+      const json = await res.json();
+      if (json.ok && Array.isArray(json.data.hotels)) {
+        setApiHotels(
+          json.data.hotels.map((h: Record<string, unknown>) => ({
+            id: h.id as number,
+            name: (h.name as string) || "",
+            arabicName: (h.name as string) || "",
+            image: h.logo ? `data:image/png;base64,${h.logo}` : "/hotel/hotel1.jpg",
+            price: (h.starting_price as number) || 0,
+            rating: (h.star_rating as number) || 0,
+            reviews: 0,
+            location: (h.location as string) || "Makkah, Saudi Arabia",
+            rooms: (h.total_available_rooms as number) || 0,
+            propertyView: (h.kaaba_view as boolean) ? "fullKaaba" : "noView",
+            guestRating: "good" as const,
+            roomTypes: ((h.room_types as { type: string }[]) || []).map((rt) => rt.type),
+          }))
+        );
+      }
+    } catch {
+      // API failed, keep using fallback data
+    }
+    setSearching(false);
+  };
+
+  // Auto-search on mount when dates are present
+  useEffect(() => {
+    if (arrival && departure) {
+      handleSearchHotels();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ---------------- POSITION UPDATE ---------------- */
   const updatePositions = () => {
@@ -195,7 +245,8 @@ export default function HotelFilter() {
   };
 
   /* ---------------- FILTER LOGIC ---------------- */
-  const filteredHotels = enabledHotelsData.filter((hotel) => {
+  const sourceHotels = apiHotels ?? enabledHotelsData;
+  const filteredHotels = sourceHotels.filter((hotel) => {
     if (appliedFilters.rating !== null && hotel.rating < appliedFilters.rating) return false;
     if (hotel.price < appliedFilters.minPrice || hotel.price > appliedFilters.maxPrice) return false;
     if (appliedFilters.propertyViews.length > 0 && !appliedFilters.propertyViews.includes(hotel.propertyView))
@@ -378,9 +429,13 @@ export default function HotelFilter() {
           {/* Search Button */}
           <div className={`flex flex-col justify-end ${lang === "ar" ? "items-start" : "items-end"} mt-2 md:mt-0`}>
             <button
-              className={`bg-[#EF4050] hover:bg-[#d93848] text-white px-10 h-15 py-1.5 rounded transition w-full md:w-auto text-ms font-medium ${lang === "ar" ? "font-arabic" : ""}`}
+              onClick={handleSearchHotels}
+              disabled={searching}
+              className={`bg-[#EF4050] hover:bg-[#d93848] text-white px-10 h-15 py-1.5 rounded transition w-full md:w-auto text-ms font-medium disabled:opacity-50 ${lang === "ar" ? "font-arabic" : ""}`}
             >
-              {lang === "ar" ? "ابحث عن الفنادق" : "Search Hotels"}
+              {searching
+                ? (lang === "ar" ? "جاري البحث..." : "Searching...")
+                : (lang === "ar" ? "ابحث عن الفنادق" : "Search Hotels")}
             </button>
           </div>
 
@@ -418,7 +473,12 @@ export default function HotelFilter() {
 
         {/* HOTEL LIST */}
         <div className="flex-1">
-          <HotelList hotels={filteredHotels} />
+          <HotelList
+            hotels={filteredHotels}
+            checkIn={arrival}
+            checkOut={departure}
+            guestDetails={guestDetails}
+          />
         </div>
       </div>
 
