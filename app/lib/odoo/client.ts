@@ -1,7 +1,9 @@
 // ═══════════════════════════════════════════════════════════════
-// Odoo REST API Client
-// Used for customer-facing REST endpoints (POST /api/*)
-// NOT for JSON-RPC admin calls — see admin-client.ts for those
+// Odoo JSON-RPC API Client
+// All Odoo HTTP endpoints (type='json') use JSON-RPC protocol:
+//   Request:  {"jsonrpc": "2.0", "params": { ...your data... }}
+//   Response: {"jsonrpc": "2.0", "result": { ...actual response... }}
+// This client wraps/unwraps that automatically.
 // ═══════════════════════════════════════════════════════════════
 
 const ODOO_BASE_URL = process.env.ODOO_URL || "";
@@ -30,7 +32,8 @@ export interface OdooFetchError {
 export type OdooFetchResult<T = unknown> = OdooFetchSuccess<T> | OdooFetchError;
 
 /**
- * Makes a request to the Odoo REST API.
+ * Makes a request to the Odoo API.
+ * Automatically wraps body in JSON-RPC format and unwraps response.
  *
  * @param path  – e.g. "/api/signin" or "/api/hotels/list"
  * @param opts  – method, body, sessionToken, query params, timeout
@@ -73,8 +76,13 @@ export async function odooFetch<T = unknown>(
     headers,
     signal: AbortSignal.timeout(timeout),
   };
-  if (body && method === "POST") {
-    init.body = JSON.stringify(body);
+
+  if (method === "POST") {
+    // Wrap body in JSON-RPC format: {"jsonrpc": "2.0", "params": {...}}
+    init.body = JSON.stringify({
+      jsonrpc: "2.0",
+      params: body || {},
+    });
   }
 
   // Execute with retry
@@ -86,7 +94,7 @@ export async function odooFetch<T = unknown>(
       // Retry on 5xx
       if (res.status >= 500 && attempt < MAX_RETRIES) {
         lastError = `Odoo returned ${res.status}`;
-        await delay(1000 * (attempt + 1)); // exponential backoff
+        await delay(1000 * (attempt + 1));
         continue;
       }
 
@@ -96,7 +104,6 @@ export async function odooFetch<T = unknown>(
         contentType.includes("application/pdf") ||
         contentType.includes("application/zip")
       ) {
-        // Return a special marker so callers know it's binary
         return {
           success: true,
           data: {
@@ -110,15 +117,29 @@ export async function odooFetch<T = unknown>(
       // Parse JSON
       const json = await res.json();
 
-      if (json.status === "error") {
+      // Handle JSON-RPC error
+      if (json.error) {
+        const errMsg =
+          json.error?.data?.message ||
+          json.error?.message ||
+          "Odoo RPC error";
+        return { success: false, error: errMsg, status: res.status };
+      }
+
+      // Unwrap JSON-RPC response: {"jsonrpc": "2.0", "result": {...}}
+      // The actual API response is inside json.result
+      const result = json.result !== undefined ? json.result : json;
+
+      // Check if the unwrapped result indicates an error
+      if (result.status === "error") {
         return {
           success: false,
-          error: json.message || "Odoo returned an error",
+          error: result.message || "Odoo returned an error",
           status: res.status,
         };
       }
 
-      return { success: true, data: json as T };
+      return { success: true, data: result as T };
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "TimeoutError") {
         lastError = `Request to ${path} timed out after ${timeout}ms`;
@@ -143,7 +164,7 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Convenience: POST to Odoo REST endpoint.
+ * Convenience: POST to Odoo endpoint (auto-wraps in JSON-RPC).
  */
 export function odooPost<T = unknown>(
   path: string,
@@ -154,7 +175,8 @@ export function odooPost<T = unknown>(
 }
 
 /**
- * Convenience: GET from Odoo REST endpoint.
+ * Convenience: GET from Odoo endpoint.
+ * Note: GET requests don't use JSON-RPC wrapping, just query params.
  */
 export function odooGet<T = unknown>(
   path: string,
