@@ -50,16 +50,10 @@ export default function HotelFilter() {
   }, []);
 
   /* ---------------- DISABLED HOTELS FILTER ------------ */
+  // NOTE: localStorage fallback COMMENTED OUT for API testing
+  // Hotels should come from API search only (apiHotels state)
   const enabledHotelsData = useMemo(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("admin_disabled_hotels") : null;
-      if (!raw) return hotelsData;
-      const disabledMap: Record<string, boolean> = JSON.parse(raw);
-      if (Object.keys(disabledMap).length === 0) return hotelsData;
-      return hotelsData.filter((h) => !disabledMap[String(h.id)]);
-    } catch {
-      return hotelsData;
-    }
+    return [] as typeof hotelsData; // Empty — API results only
   }, []);
 
   /* ---------------- DATE & GUEST STATE ---------------- */

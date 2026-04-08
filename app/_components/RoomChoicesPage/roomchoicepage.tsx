@@ -16,13 +16,9 @@ type RoomData = {
   image: string;
 };
 
-// Fallback hardcoded rooms (used when API is unavailable)
-const fallbackRooms: RoomData[] = [
-  { id: 1, name: "Deluxe Room", nameAr: "غرفة ديلوكس", price: 240, beds: 1, adults: 2, children: 1, image: "/Hotel_Room/deluxeroom.jpeg" },
-  { id: 2, name: "Double Room", nameAr: "غرفة مزدوجة", price: 260, beds: 3, adults: 4, children: 3, image: "/Hotel_Room/studiosuite.jpeg" },
-  { id: 3, name: "Family Suite", nameAr: "جناح عائلي", price: 220, beds: 4, adults: 6, children: 3, image: "/Hotel_Room/familyroom.jpeg" },
-  { id: 4, name: "Hexagonal Room", nameAr: "غرفة سداسية", price: 280, beds: 2, adults: 5, children: 4, image: "/Hotel_Room/luxuryroom.jpeg" },
-];
+// NOTE: Fallback rooms COMMENTED OUT for API testing
+// All room data should come from Odoo API only
+const fallbackRooms: RoomData[] = [];
 
 const roomImages = ["/Hotel_Room/deluxeroom.jpeg", "/Hotel_Room/studiosuite.jpeg", "/Hotel_Room/familyroom.jpeg", "/Hotel_Room/luxuryroom.jpeg"];
 
@@ -166,6 +162,18 @@ export default function RoomChoicesPage() {
       <div className={`max-w-7xl mx-auto mt-20 px-4 py-6 ${isArabic ? "font-arabic" : ""}`} dir={isArabic ? "rtl" : "ltr"}>
         <div className="text-center py-12 text-gray-500">
           {isArabic ? "جاري تحميل الغرف المتاحة..." : "Loading available rooms..."}
+        </div>
+      </div>
+    );
+  }
+
+  if (!loading && rooms.length === 0) {
+    return (
+      <div className={`max-w-7xl mx-auto mt-20 px-4 py-6 ${isArabic ? "font-arabic" : ""}`} dir={isArabic ? "rtl" : "ltr"}>
+        <div className="text-center py-12 text-red-500">
+          {!hotelId
+            ? (isArabic ? "معرّف الفندق مفقود من الرابط. يرجى اختيار فندق أولاً." : "Hotel ID missing from URL. Please select a hotel first.")
+            : (isArabic ? "لا توجد غرف متاحة من API. تحقق من اتصال Odoo." : "No rooms available from API. Check Odoo connection.")}
         </div>
       </div>
     );

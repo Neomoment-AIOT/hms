@@ -51,30 +51,8 @@ export default function Hotels() {
         // API failed, fall through to fallback
       }
 
-      // Fallback: try localStorage (admin-synced hotels)
-      try {
-        const disabledRaw = localStorage.getItem("admin_disabled_hotels");
-        const disabledMap: Record<string, boolean> = disabledRaw ? JSON.parse(disabledRaw) : {};
-
-        const stored = localStorage.getItem("admin_odoo_hotels");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setHotelsList(
-              parsed
-                .filter((h: Record<string, unknown>) => !disabledMap[String(h.id)])
-                .map((h: Record<string, unknown>) => ({
-                  id: h.id as number,
-                  nameEn: ((h.name as string) || (h.nameEn as string) || "") as string,
-                  nameAr: ((h.arabicName as string) || (h.nameAr as string) || "") as string,
-                  price: (h.price || 0) as number,
-                  imageUrl: ((h.image as string) || (h.imageUrl as string) || "/hotel/hotel1.jpg") as string,
-                  rating: (h.rating || 0) as number,
-                }))
-            );
-          }
-        }
-      } catch {}
+      // NOTE: localStorage fallback COMMENTED OUT for API testing
+      // All hotel data should come from Odoo API only
       setLoading(false);
     };
 

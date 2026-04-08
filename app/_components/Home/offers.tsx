@@ -12,16 +12,9 @@ type Hotel = {
   imageUrl: string;
 };
 
-const hotels: Hotel[] = [
-  { id: 1, nameEn: "Kudi Tower", nameAr: "كدي تاور", price: 250, imageUrl: "/hotel/hotel1.jpg" },
-  { id: 2, nameEn: "Al-Refaa Al-Sadd Hotel", nameAr: "فندق الرفاع السد", price: 290, imageUrl: "/hotel/hotel2.jpeg" },
-  { id: 3, nameEn: "Karam Al-Refaa Hotel", nameAr: "فندق كرم الرفاع", price: 190, imageUrl: "/hotel/hotel3.jpeg" },
-  { id: 4, nameEn: "Barkat Al-Refaa Hotel", nameAr: "فندق بركة الرفاع", price: 224, imageUrl: "/hotel/hotel4.jpeg" },
-  { id: 5, nameEn: "Nasmah Al-Khaiir Hotel", nameAr: "فندق نسمات الخير", price: 184, imageUrl: "/hotel/hotel5.jpeg" },
-  { id: 6, nameEn: "Al-Fajr Al-Badee 1", nameAr: "الفجر البديع 1", price: 204, imageUrl: "/hotel/hotel6.jpeg" },
-  { id: 7, nameEn: "Al-Refaa Ri'a Baksh Hotel", nameAr: "فندق الرفاع ريع بخش", price: 180, imageUrl: "/hotel/hotel7.jpeg" },
-  { id: 8, nameEn: "Rawaabi Al-Salam Hotel", nameAr: "فندق روابي السلام", price: 154, imageUrl: "/hotel/hotel8.jpeg" },
-];
+// NOTE: Hardcoded offers COMMENTED OUT for API testing
+// Offers should come from Odoo CMS API (M7) when built
+const hotels: Hotel[] = [];
 
 const toArabicNumbers = (num: number) =>
   num.toString().replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[+d]);
