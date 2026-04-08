@@ -44,6 +44,12 @@ export default function GuestDetailsPage() {
   const [apiCountries, setApiCountries] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // Hotel detail from API
+  const [hotelDetail, setHotelDetail] = useState<{
+    name: string; phone: string; star_rating: number; location: string;
+    logo: string | null; room_types: { id: number; type: string; pax: number }[];
+  } | null>(null);
+
   useEffect(() => {
     const inDate = searchParams.get("checkIn");
     const outDate = searchParams.get("checkOut");
@@ -51,6 +57,28 @@ export default function GuestDetailsPage() {
     if (inDate) setCheckIn(new Date(inDate + "T00:00:00"));
     if (outDate) setCheckOut(new Date(outDate + "T00:00:00"));
   }, [searchParams]);
+
+  // Fetch hotel details from API
+  useEffect(() => {
+    if (!hotelId || !searchParams.get("checkIn") || !searchParams.get("checkOut")) return;
+    fetch(`/api/hotels/${hotelId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        checkin_date: searchParams.get("checkIn"),
+        checkout_date: searchParams.get("checkOut"),
+        room_count: 1,
+        adult_count: Number(adultsParam),
+      }),
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.ok && json.data?.hotel) {
+          setHotelDetail(json.data.hotel);
+        }
+      })
+      .catch(() => {});
+  }, [hotelId, searchParams, adultsParam]);
 
   // Fetch countries from API
   useEffect(() => {
@@ -65,6 +93,14 @@ export default function GuestDetailsPage() {
   }, []);
 
   const displayCountries = apiCountries.length > 0 ? apiCountries : countries;
+
+  // Derive room name from API hotel detail or fallback roomsData
+  const apiRoom = hotelDetail?.room_types?.find((rt) => rt.id === roomTypeId);
+  const effectiveRoomName = apiRoom?.type || selectedRoom?.name || "N/A";
+  const effectiveHotelName = hotelDetail?.name || "N/A (loading...)";
+  const effectiveHotelRating = hotelDetail?.star_rating || 0;
+  const effectiveHotelPhone = hotelDetail?.phone || "";
+  const effectiveHotelLocation = hotelDetail?.location || "";
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -92,19 +128,17 @@ export default function GuestDetailsPage() {
   const handleDownloadPDF = () => {
     const labels = getPDFLabels(isArabic);
     generateBookingPDF({
-      bookingRef: "REF202503091738433773",
+      bookingRef: "TBD",
       guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
       email: email || "N/A",
-      roomName: selectedRoom?.name || "N/A",
+      roomName: effectiveRoomName || "N/A",
       roomCount: count,
       checkIn: format(checkIn, "dd MMM yyyy"),
       checkOut: format(checkOut, "dd MMM yyyy"),
-      hotelName: "Raffah-2",
-      hotelAddress: isArabic
-        ? "بلعقيق، طريق الملك فهد، الرياض 13515، المملكة العربية السعودية"
-        : "BeAl Aqiq, King Fahd Branch Rd, Riyadh 13515, Saudi Arabia",
-      hotelPhone: "+966 920010417",
-      rating: "3 / 5",
+      hotelName: effectiveHotelName,
+      hotelAddress: effectiveHotelLocation || "N/A",
+      hotelPhone: effectiveHotelPhone ? `+966 ${effectiveHotelPhone}` : "N/A",
+      rating: `${effectiveHotelRating} / 5`,
       meals,
       mealPrices: MEAL_PRICES,
       roomPrice: roomTotal,
@@ -116,7 +150,7 @@ export default function GuestDetailsPage() {
 
   const handleContinueToPayment = async () => {
     const bookingData = {
-      roomName: selectedRoom?.name,
+      roomName: effectiveRoomName,
       roomCount: count,
       checkIn: format(checkIn, "yyyy-MM-dd"),
       checkOut: format(checkOut, "yyyy-MM-dd"),
@@ -304,15 +338,15 @@ export default function GuestDetailsPage() {
           {/* HOTEL CARD */}
           <div className="flex gap-3 items-start mb-4">
             <img
-              src="/Hotel_Room/luxuryroom.jpeg"
+              src={hotelDetail?.logo || "/Hotel_Room/luxuryroom.jpeg"}
               className="w-16 h-16 rounded object-cover"
               alt="hotel"
             />
 
             <div className="flex-1">
-              <h4 className="font-semibold">Raffah-2</h4>
+              <h4 className="font-semibold">{effectiveHotelName}</h4>
               <div className="flex items-center gap-1 text-sm text-gray-600">
-                <FaStar className="text-yellow-400" /> 3 / 5
+                <FaStar className="text-yellow-400" /> {effectiveHotelRating} / 5
               </div>
             </div>
 
@@ -326,14 +360,14 @@ export default function GuestDetailsPage() {
 
           <div className="flex items-start gap-2 text-sm text-gray-600 mb-4">
             <FaMapMarkerAlt />
-            <p>{isArabic ? "بلعقيق، طريق الملك فهد، الرياض 13515، المملكة العربية السعودية." : "BeAl Aqiq, RRAA8604, 8604 King Fahd Branch Rd, 3780., Riyadh 13515, Saudi Arabia."}</p>
+            <p>{effectiveHotelLocation || (isArabic ? "الموقع غير متوفر" : "Location not available")}</p>
           </div>
 
           {/* DETAILS */}
           <div className="text-sm space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-500">{isArabic ? "مرجع الحجز" : "Booking Ref."}</span>
-              <span>REF202503091738433773</span>
+              <span className="text-gray-400 italic">{isArabic ? "سيتم إنشاؤه عند التأكيد" : "Generated on confirm"}</span>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -355,8 +389,8 @@ export default function GuestDetailsPage() {
             </div>
 
             <div className="border-t pt-3 text-sm">
-              <p>{isArabic ? `الغرفة ${count}: ${selectedRoom?.name}` : `Room ${count}: ${selectedRoom?.name}`}</p>
-              <p className="text-gray-500">{isArabic ? "البالغ: 1 | الأطفال: 1 | إجمالي العدد: 1" : "Adult: 1 | Children: 1 | Total Pax: 1"}</p>
+              <p>{isArabic ? `الغرفة ${count}: ${effectiveRoomName}` : `Room ${count}: ${effectiveRoomName}`}</p>
+              <p className="text-gray-500">{isArabic ? `البالغ: ${adultsParam} | الأطفال: ${childrenParam} | إجمالي العدد: ${Number(adultsParam) + Number(childrenParam)}` : `Adult: ${adultsParam} | Children: ${childrenParam} | Total Pax: ${Number(adultsParam) + Number(childrenParam)}`}</p>
             </div>
           </div>
 
@@ -377,7 +411,7 @@ export default function GuestDetailsPage() {
               </div>
 
               <div className="flex justify-between">
-                <span>{isArabic ? `الغرفة ${count} ${selectedRoom?.name}` : `Room ${count} ${selectedRoom?.name}`}</span>
+                <span>{isArabic ? `الغرفة ${count} ${effectiveRoomName}` : `Room ${count} ${effectiveRoomName}`}</span>
                 <span className="flex items-center gap-1">
                   <Riyal /> <span>{roomTotal}</span>
                 </span>
