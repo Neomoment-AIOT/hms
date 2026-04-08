@@ -39,10 +39,14 @@ export async function POST(
       );
     }
 
+    // Odoo returns hotels as an OBJECT for single hotel, or ARRAY for multiple
+    const hotelsData = result.data.hotels;
+    const hotel = Array.isArray(hotelsData) ? hotelsData[0] : hotelsData || null;
+
     return NextResponse.json({
       ok: true,
       data: {
-        hotel: result.data.hotels?.[0] || null,
+        hotel,
         services: result.data.services || [],
         meals: result.data.meals || [],
       },
