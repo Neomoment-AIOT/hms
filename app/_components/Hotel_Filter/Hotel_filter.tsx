@@ -64,6 +64,7 @@ export default function HotelFilter() {
   const departureRef = useRef<HTMLDivElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
   const popupContentRef = useRef<HTMLDivElement | null>(null);
+  const searchStartedRef = useRef(false);
 
   /* Sync state from URL params if they arrive after initial render (SSR edge case) */
   useEffect(() => {
@@ -157,8 +158,11 @@ export default function HotelFilter() {
   };
 
   /* Auto-search on mount: read directly from window.location so we bypass
-     any SSR/hydration timing issues with useSearchParams reference stability */
+     any SSR/hydration timing issues with useSearchParams reference stability.
+     searchStartedRef prevents React StrictMode double-mount from firing twice. */
   useEffect(() => {
+    if (searchStartedRef.current) return;
+    searchStartedRef.current = true;
     const params = new URLSearchParams(window.location.search);
     const ci = params.get("checkIn");
     const co = params.get("checkOut");
@@ -310,7 +314,7 @@ export default function HotelFilter() {
               createPortal(
                 <div
                   className="absolute z-50"
-                  style={{ top: arrivalPos.top, left: arrivalPos.left, transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)", transformOrigin: "top left" }}
+                  style={{ top: arrivalPos.top, left: Math.min(arrivalPos.left, Math.max(0, window.innerWidth - 340)), transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)", transformOrigin: "top left" }}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   <ArabicCalendar
@@ -350,7 +354,7 @@ export default function HotelFilter() {
               createPortal(
                 <div
                   className="absolute z-50"
-                  style={{ top: departurePos.top, left: departurePos.left, transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)", transformOrigin: "top left" }}
+                  style={{ top: departurePos.top, left: Math.min(departurePos.left, Math.max(0, window.innerWidth - 340)), transform: window.innerWidth < 768 ? "scale(0.7)" : "scale(0.85)", transformOrigin: "top left" }}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   <ArabicCalendar
@@ -391,8 +395,11 @@ export default function HotelFilter() {
                 <div
                   ref={popupContentRef}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className={`absolute mt-2 bg-white shadow-lg rounded-md w-[80%] lg:w-fit p-2 text-xs z-20 ${lang === "ar" ? "font-arabic text-right rtl" : "text-left"}`}
-                  style={{ top: menuTopPosition, left: menuLeftPosition }}
+                  className={`absolute mt-2 bg-white shadow-lg rounded-md w-64 p-2 text-xs z-20 ${lang === "ar" ? "font-arabic text-right rtl" : "text-left"}`}
+                  style={{
+                    top: menuTopPosition,
+                    left: Math.min(menuLeftPosition, Math.max(0, window.innerWidth - 270)),
+                  }}
                 >
                   {["room", "adult", "children"].map((key) => (
                     <div
