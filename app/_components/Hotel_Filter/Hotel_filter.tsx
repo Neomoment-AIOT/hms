@@ -131,9 +131,11 @@ export default function HotelFilter() {
             reviews: 0,
             location: (h.location as string) || "Makkah, Saudi Arabia",
             rooms: (h.total_available_rooms as number) || 0,
-            propertyView: (h.kaaba_view as boolean) ? "fullKaaba" : "noView",
+            propertyView: h.kaaba_view === "full_kaaba_view" ? "fullKaaba"
+              : h.kaaba_view === "partial_kaaba_view" ? "partialKaaba"
+              : "noView",
             guestRating: "good" as const,
-            roomTypes: ((h.room_types as { type: string }[]) || []).map((rt) => rt.type),
+            roomTypes: ((h.room_types as { type: string }[]) || []).map((rt) => (rt.type || "").toLowerCase()),
           }))
         );
       }
@@ -703,16 +705,12 @@ function FilterContent({
         </h3>
 
         {[
-          { en: "Deluxe Room", ar: "غرفة ديلوكس", value: "deluxe" },
           { en: "Double Room", ar: "غرفة مزدوجة", value: "double" },
-          { en: "Quadruple Room", ar: "غرفة رباعية", value: "quadruple" },
-          { en: "Family Suite", ar: "جناح عائلي", value: "familySuite" },
-          { en: "Junior Suite", ar: "جناح صغير", value: "juniorSuite" },
-          { en: "Standard Room", ar: "غرفة قياسية", value: "standard" },
           { en: "Triple Room", ar: "غرفة ثلاثية", value: "triple" },
-          { en: "Super Deluxe Room", ar: "غرفة سوبر ديلوكس", value: "superDeluxe" },
-          { en: "Hexagonal Room", ar: "غرفة سداسية", value: "hexagonal" },
-          { en: "Senior Suite", ar: "جناح كبير", value: "seniorSuite" },
+          { en: "Quad Room", ar: "غرفة رباعية", value: "quad" },
+          { en: "Suite", ar: "جناح", value: "suite" },
+          { en: "Quintuple Room", ar: "غرفة خماسية", value: "quintuple" },
+          { en: "Sextuple Room", ar: "غرفة سداسية", value: "sextuple" },
         ].map((room) => (
           <label key={room.value} className={`flex items-center justify-between w-full cursor-pointer ${lang === "ar" ? "flex-row-reverse text-right" : ""}`}>
             {lang === "ar" ? (
