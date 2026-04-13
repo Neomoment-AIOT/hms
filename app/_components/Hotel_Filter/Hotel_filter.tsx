@@ -29,26 +29,6 @@ export default function HotelFilter() {
   const { lang } = useContext(LangContext);
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const checkIn = searchParams.get("checkIn");
-    const checkOut = searchParams.get("checkOut");
-
-    if (checkIn) {
-      setArrival(new Date(checkIn + "T00:00:00"));
-    }
-
-    if (checkOut) {
-      setDeparture(new Date(checkOut + "T00:00:00"));
-    }
-
-    setGuestDetails({
-      room: Number(searchParams.get("room") ?? 1),
-      adult: Number(searchParams.get("adult") ?? 1),
-      children: Number(searchParams.get("children") ?? 0),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   /* ---------------- DISABLED HOTELS FILTER ------------ */
   // NOTE: localStorage fallback COMMENTED OUT for API testing
   // Hotels should come from API search only (apiHotels state)
@@ -56,18 +36,25 @@ export default function HotelFilter() {
     return [] as typeof hotelsData; // Empty — API results only
   }, []);
 
-  /* ---------------- DATE & GUEST STATE ---------------- */
-  const [arrival, setArrival] = useState<Date | undefined>(undefined);
-  const [departure, setDeparture] = useState<Date | undefined>(undefined);
+  /* ---------------- DATE & GUEST STATE (init from URL params directly) ---------------- */
+  const checkInParam = searchParams.get("checkIn");
+  const checkOutParam = searchParams.get("checkOut");
+
+  const [arrival, setArrival] = useState<Date | undefined>(
+    checkInParam ? new Date(checkInParam + "T00:00:00") : undefined
+  );
+  const [departure, setDeparture] = useState<Date | undefined>(
+    checkOutParam ? new Date(checkOutParam + "T00:00:00") : undefined
+  );
   const [showArrivalCalendar, setShowArrivalCalendar] = useState(false);
   const [showDepartureCalendar, setShowDepartureCalendar] = useState(false);
   const [arrivalPos, setArrivalPos] = useState({ top: 0, left: 0 });
   const [departurePos, setDeparturePos] = useState({ top: 0, left: 0 });
 
   const [guestDetails, setGuestDetails] = useState<GuestDetails>({
-    room: 1,
-    adult: 1,
-    children: 0,
+    room: Number(searchParams.get("room") ?? 1),
+    adult: Number(searchParams.get("adult") ?? 1),
+    children: Number(searchParams.get("children") ?? 0),
   });
   const [showGuestPopup, setShowGuestPopup] = useState(false);
   const [menuTopPosition, setMenuTopPosition] = useState(0);
@@ -77,6 +64,21 @@ export default function HotelFilter() {
   const departureRef = useRef<HTMLDivElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
   const popupContentRef = useRef<HTMLDivElement | null>(null);
+
+  /* Sync state from URL params if they arrive after initial render (SSR edge case) */
+  useEffect(() => {
+    const ci = searchParams.get("checkIn");
+    const co = searchParams.get("checkOut");
+    if (ci && !arrival) setArrival(new Date(ci + "T00:00:00"));
+    if (co && !departure) setDeparture(new Date(co + "T00:00:00"));
+    const r = Number(searchParams.get("room") ?? 0);
+    const a = Number(searchParams.get("adult") ?? 0);
+    const c = Number(searchParams.get("children") ?? 0);
+    if (r && guestDetails.room !== r) setGuestDetails(prev => ({ ...prev, room: r }));
+    if (a && guestDetails.adult !== a) setGuestDetails(prev => ({ ...prev, adult: a }));
+    if (c !== undefined && guestDetails.children !== c) setGuestDetails(prev => ({ ...prev, children: c }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   /* ---------------- FILTER STATE ---------------- */
   const [filters, setFilters] = useState<Filters>({
@@ -93,29 +95,37 @@ export default function HotelFilter() {
   const [apiHotels, setApiHotels] = useState<typeof hotelsData | null>(null);
   const [searching, setSearching] = useState(false);
 
-  /* ---------------- API SEARCH ---------------- */
-  const handleSearchHotels = async () => {
-    if (!arrival || !departure) return;
+  /* ---------------- HOTEL FALLBACK IMAGES ---------------- */
+  const hotelFallbacks = useMemo(() => [
+    "/hotel/hotel1.jpg", "/hotel/hotel2.jpeg", "/hotel/hotel3.jpeg",
+    "/hotel/hotel4.jpeg", "/hotel/hotel5.jpeg", "/hotel/hotel6.jpeg",
+    "/hotel/hotel7.jpeg", "/hotel/hotel8.jpeg", "/hotel/hotel9.jpeg",
+    "/hotel/hotel10.jpeg", "/hotel/hotel11.jpeg", "/hotel/hotel12.jpeg",
+    "/hotel/hotel13.jpeg", "/hotel/hotel14.jpeg",
+  ], []);
+
+  /* ---------------- API SEARCH (uses explicit dates to avoid stale closures) ---------------- */
+  const doSearch = async (checkIn: string, checkOut: string, rooms: number, adults: number) => {
     setSearching(true);
     try {
       const res = await fetch("/api/hotels/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          checkin_date: format(arrival, "yyyy-MM-dd"),
-          checkout_date: format(departure, "yyyy-MM-dd"),
-          room_count: guestDetails.room || 1,
-          adult_count: guestDetails.adult || 1,
+          checkin_date: checkIn,
+          checkout_date: checkOut,
+          room_count: rooms || 1,
+          adult_count: adults || 1,
         }),
       });
       const json = await res.json();
       if (json.ok && Array.isArray(json.data.hotels)) {
         setApiHotels(
-          json.data.hotels.map((h: Record<string, unknown>) => ({
+          json.data.hotels.map((h: Record<string, unknown>, idx: number) => ({
             id: h.id as number,
             name: (h.name as string) || "",
             arabicName: (h.name as string) || "",
-            image: h.logo ? `data:image/png;base64,${h.logo}` : "/hotel/hotel1.jpg",
+            image: h.logo ? `data:image/png;base64,${h.logo}` : hotelFallbacks[idx % hotelFallbacks.length],
             price: (h.starting_price as number) || 0,
             rating: (h.star_rating as number) || 0,
             reviews: 0,
@@ -133,13 +143,31 @@ export default function HotelFilter() {
     setSearching(false);
   };
 
-  // Auto-search on mount when dates are present
+  /* Wrapper for the Search Hotels button (reads from component state) */
+  const handleSearchHotels = () => {
+    if (!arrival || !departure) return;
+    doSearch(
+      format(arrival, "yyyy-MM-dd"),
+      format(departure, "yyyy-MM-dd"),
+      guestDetails.room,
+      guestDetails.adult
+    );
+  };
+
+  /* Auto-search on mount: reads directly from URL params (no stale closure issue) */
   useEffect(() => {
-    if (arrival && departure) {
-      handleSearchHotels();
+    const ci = searchParams.get("checkIn");
+    const co = searchParams.get("checkOut");
+    if (ci && co) {
+      doSearch(
+        ci,
+        co,
+        Number(searchParams.get("room") ?? 1),
+        Number(searchParams.get("adult") ?? 1)
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   /* ---------------- POSITION UPDATE ---------------- */
   const updatePositions = () => {
@@ -467,12 +495,19 @@ export default function HotelFilter() {
 
         {/* HOTEL LIST */}
         <div className="flex-1">
-          <HotelList
-            hotels={filteredHotels}
-            checkIn={arrival}
-            checkOut={departure}
-            guestDetails={guestDetails}
-          />
+          {searching ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-10 h-10 border-4 border-gray-200 border-t-teal-600 rounded-full animate-spin" />
+              <p className="text-gray-500 text-sm">{lang === "ar" ? "جاري البحث عن الفنادق..." : "Searching for hotels..."}</p>
+            </div>
+          ) : (
+            <HotelList
+              hotels={filteredHotels}
+              checkIn={arrival}
+              checkOut={departure}
+              guestDetails={guestDetails}
+            />
+          )}
         </div>
       </div>
 

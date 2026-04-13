@@ -32,15 +32,22 @@ export default function Hotels() {
         const json = await res.json();
 
         if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
+          const hotelFallbacks = [
+            "/hotel/hotel1.jpg", "/hotel/hotel2.jpeg", "/hotel/hotel3.jpeg",
+            "/hotel/hotel4.jpeg", "/hotel/hotel5.jpeg", "/hotel/hotel6.jpeg",
+            "/hotel/hotel7.jpeg", "/hotel/hotel8.jpeg", "/hotel/hotel9.jpeg",
+            "/hotel/hotel10.jpeg", "/hotel/hotel11.jpeg", "/hotel/hotel12.jpeg",
+            "/hotel/hotel13.jpeg", "/hotel/hotel14.jpeg",
+          ];
           setHotelsList(
-            json.data.map((h: Record<string, unknown>) => ({
+            json.data.map((h: Record<string, unknown>, idx: number) => ({
               id: h.id as number,
               nameEn: (h.name as string) || "",
               nameAr: (h.name as string) || "", // Odoo returns single name; Arabic TBD
               price: (h.starting_price as number) || 0,
               imageUrl: h.logo
                 ? `data:image/png;base64,${h.logo}`
-                : "/hotel/hotel1.jpg",
+                : hotelFallbacks[idx % hotelFallbacks.length],
               rating: (h.star_rating as number) || 0,
             }))
           );
