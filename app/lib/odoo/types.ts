@@ -46,6 +46,7 @@ export interface SignInResponse {
   message: string;
   session_token?: string;
   partner_id?: number;
+  name?: string;
   email?: string;
 }
 

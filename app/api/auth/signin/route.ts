@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { session_token, partner_id, email } = result.data;
+    const { session_token, partner_id, name, email } = result.data;
 
     if (!session_token || !partner_id) {
       return NextResponse.json(
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       data: {
         partner_id,
         email: email || body.email,
-        name: result.data.message || "",
+        name: name || (body.email ? body.email.split("@")[0] : ""),
       },
     });
 
