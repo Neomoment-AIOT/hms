@@ -157,23 +157,35 @@ export default function HotelFilter() {
     );
   };
 
-  /* Auto-search on mount: read directly from window.location so we bypass
-     any SSR/hydration timing issues with useSearchParams reference stability.
-     searchStartedRef prevents React StrictMode double-mount from firing twice. */
+  /* Auto-search on mount + back-navigation.
+     - searchStartedRef guard prevents React StrictMode double-mount from firing twice.
+     - popstate listener re-fires when the user hits the browser Back button from
+       RoomChoices (Next.js may serve the page from router cache without remounting,
+       so the mount-only effect wouldn't fire a second time). */
   useEffect(() => {
-    if (searchStartedRef.current) return;
-    searchStartedRef.current = true;
-    const params = new URLSearchParams(window.location.search);
-    const ci = params.get("checkIn");
-    const co = params.get("checkOut");
-    if (ci && co) {
-      doSearch(
-        ci,
-        co,
-        Number(params.get("room") ?? 1),
-        Number(params.get("adult") ?? 1)
-      );
+    const runSearch = () => {
+      const params = new URLSearchParams(window.location.search);
+      const ci = params.get("checkIn");
+      const co = params.get("checkOut");
+      if (ci && co) {
+        doSearch(
+          ci,
+          co,
+          Number(params.get("room") ?? 1),
+          Number(params.get("adult") ?? 1)
+        );
+      }
+    };
+
+    // Initial mount (ref guard stops StrictMode second call)
+    if (!searchStartedRef.current) {
+      searchStartedRef.current = true;
+      runSearch();
     }
+
+    // Back/forward navigation — always re-run
+    window.addEventListener("popstate", runSearch);
+    return () => window.removeEventListener("popstate", runSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -264,9 +276,8 @@ export default function HotelFilter() {
     };
     setFilters(reset);
     setAppliedFilters(reset);
-    setGuestDetails({ room: 1, adult: 1, children: 0 });
-    setArrival(undefined);
-    setDeparture(undefined);
+    // NOTE: intentionally NOT resetting arrival, departure, or guestDetails —
+    // those belong to the search bar, not the side filters.
   };
 
   const handleApply = () => {
