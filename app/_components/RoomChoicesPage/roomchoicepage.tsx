@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FaBed, FaHome, FaUser, FaChild, FaChevronDown } from "react-icons/fa";
 import { LangContext } from "@/app/lang-provider";
@@ -52,94 +52,102 @@ export default function RoomChoicesPage() {
     );
   }, [rooms]);
 
-  // Fetch rooms from API when hotelId + dates are present
-  useEffect(() => {
+  // Fetch rooms + rates from API (extracted so auth-change can re-trigger it)
+  const fetchRooms = useCallback(async () => {
     if (!hotelId || !checkIn || !checkOut) return;
 
-    const fetchRooms = async () => {
-      setLoading(true);
-      try {
-        // Include logged-in user info for partner-specific rate codes
-        const user = getUser();
-        const res = await fetch("/api/rooms/availability", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            hotel_id: Number(hotelId),
-            check_in_date: checkIn,
-            check_out_date: checkOut,
-            person_count: Number(adultParam),
-            room_count: Number(roomParam),
-            person_email: user?.email || "",
-            person_id: user?.partner_id || 0,
-          }),
-        });
-        const json = await res.json();
+    setLoading(true);
+    try {
+      // Include logged-in user info for partner-specific rate codes
+      const user = getUser();
+      const res = await fetch("/api/rooms/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hotel_id: Number(hotelId),
+          check_in_date: checkIn,
+          check_out_date: checkOut,
+          person_count: Number(adultParam),
+          room_count: Number(roomParam),
+          person_email: user?.email || "",
+          person_id: user?.partner_id || 0,
+        }),
+      });
+      const json = await res.json();
 
-        if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
-          const hotelData = json.data[0];
-          const roomTypes = hotelData.room_types || [];
+      if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
+        const hotelData = json.data[0];
+        const roomTypes = hotelData.room_types || [];
 
-          if (roomTypes.length > 0) {
-            const mappedRooms: RoomData[] = roomTypes.map(
-              (rt: { id: number; type: string; pax: number; room_count: number }, index: number) => ({
-                id: rt.id,
-                name: rt.type,
-                nameAr: rt.type, // Odoo returns single name
-                price: 0, // Will be fetched via rates API
-                beds: rt.room_count,
-                adults: rt.pax,
-                children: 0,
-                image: roomImages[index % roomImages.length],
-              })
-            );
+        if (roomTypes.length > 0) {
+          const mappedRooms: RoomData[] = roomTypes.map(
+            (rt: { id: number; type: string; pax: number; room_count: number }, index: number) => ({
+              id: rt.id,
+              name: rt.type,
+              nameAr: rt.type, // Odoo returns single name
+              price: 0, // Will be fetched via rates API
+              beds: rt.room_count,
+              adults: rt.pax,
+              children: 0,
+              image: roomImages[index % roomImages.length],
+            })
+          );
 
-            // Fetch rates for each room type
-            const roomsWithPrices = await Promise.all(
-              mappedRooms.map(async (room) => {
-                try {
-                  const rateUser = getUser();
-                  const rateRes = await fetch("/api/rooms/rates", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      room_type_id: room.id,
-                      total_person_count: Number(adultParam),
-                      total_child_count: Number(childrenParam),
-                      check_in_date: checkIn,
-                      check_out_date: checkOut,
-                      person_email: rateUser?.email || "",
-                      person_id: rateUser?.partner_id || 0,
-                    }),
-                  });
-                  const rateJson = await rateRes.json();
-                  if (rateJson.ok && Array.isArray(rateJson.data) && rateJson.data.length > 0) {
-                    const rate = rateJson.data[0];
-                    const price = rate.price?.adult || rate.pax_1 || 0;
-                    return { ...room, price };
-                  }
-                } catch {
-                  // Rate fetch failed, keep price as 0
+          // Fetch rates for each room type
+          const roomsWithPrices = await Promise.all(
+            mappedRooms.map(async (room) => {
+              try {
+                const rateUser = getUser();
+                const rateRes = await fetch("/api/rooms/rates", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    room_type_id: room.id,
+                    total_person_count: Number(adultParam),
+                    total_child_count: Number(childrenParam),
+                    check_in_date: checkIn,
+                    check_out_date: checkOut,
+                    person_email: rateUser?.email || "",
+                    person_id: rateUser?.partner_id || 0,
+                  }),
+                });
+                const rateJson = await rateRes.json();
+                if (rateJson.ok && Array.isArray(rateJson.data) && rateJson.data.length > 0) {
+                  const rate = rateJson.data[0];
+                  const price = rate.price?.adult || rate.pax_1 || 0;
+                  return { ...room, price };
                 }
-                return room;
-              })
-            );
+              } catch {
+                // Rate fetch failed, keep price as 0
+              }
+              return room;
+            })
+          );
 
-            setRooms(roomsWithPrices);
-            setLoading(false);
-            return;
-          }
+          setRooms(roomsWithPrices);
+          setLoading(false);
+          return;
         }
-      } catch {
-        // API failed
       }
-      // Fallback to hardcoded rooms
-      setRooms(fallbackRooms);
-      setLoading(false);
-    };
-
-    fetchRooms();
+    } catch {
+      // API failed
+    }
+    // Fallback to hardcoded rooms
+    setRooms(fallbackRooms);
+    setLoading(false);
   }, [hotelId, checkIn, checkOut, adultParam, childrenParam, roomParam]);
+
+  // Fetch on mount and when search params change
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
+
+  // Re-fetch when user logs in or out (rates change based on partner rate code)
+  useEffect(() => {
+    const onAuthChange = () => { fetchRooms(); };
+    window.addEventListener("auth-change", onAuthChange);
+    return () => window.removeEventListener("auth-change", onAuthChange);
+  }, [fetchRooms]);
 
   const increment = (id: number) => {
     setRoomCounts({ ...roomCounts, [id]: (roomCounts[id] || 1) + 1 });

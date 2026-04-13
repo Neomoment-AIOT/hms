@@ -9,6 +9,7 @@ import RetrieveBooking from "@/app/Retrive_Booking/page";
 import SignIn from "../signin/page";
 import SignUp from "../signup/page";
 import ForgotPassword from "../forgot_password/page";
+import { getUser, signOut } from "@/app/utils/auth";
 
 type User = {
   name: string;
@@ -34,10 +35,17 @@ export default function Header() {
   const [isRetrieveBookingOpen, setIsRetrieveBookingOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) setUser(JSON.parse(storedUser));
-    }
+    // Read the full user object from auth.ts (includes partner_id)
+    const storedUser = getUser();
+    if (storedUser) setUser({ name: storedUser.name, email: storedUser.email });
+
+    // Listen for auth changes (login/logout from any component)
+    const onAuthChange = () => {
+      const u = getUser();
+      setUser(u ? { name: u.name, email: u.email } : null);
+    };
+    window.addEventListener("auth-change", onAuthChange);
+    return () => window.removeEventListener("auth-change", onAuthChange);
   }, []);
 
   const selectLanguage = (l: "en" | "ar") => {
@@ -45,17 +53,17 @@ export default function Header() {
     setIsLangDropdownOpen(false);
   };
 
-  const handleSignInSuccess = (u: User) => {
-    setUser(u);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("user", JSON.stringify(u));
-    }
+  const handleSignInSuccess = (_u: User) => {
+    // auth.ts signIn() already saved the full user (with partner_id) to localStorage
+    // Just read it back — do NOT overwrite with partial data
+    const fullUser = getUser();
+    setUser(fullUser ? { name: fullUser.name, email: fullUser.email } : _u);
     setIsSignInOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(); // clears cookies + localStorage + dispatches auth-change
     setUser(null);
-    localStorage.removeItem("user");
     setIsUserDropdownOpen(false);
   };
 
