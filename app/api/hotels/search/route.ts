@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       checkout_date: body.checkout_date,
       room_count: body.room_count,
       adult_count: body.adult_count,
+      person_email: body.person_email || "",
     });
 
     if (!result.success) {

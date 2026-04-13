@@ -4,6 +4,7 @@ import { useState, useContext, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FaBed, FaHome, FaUser, FaChild, FaChevronDown } from "react-icons/fa";
 import { LangContext } from "@/app/lang-provider";
+import { getUser } from "@/app/utils/auth";
 
 type RoomData = {
   id: number;
@@ -58,6 +59,8 @@ export default function RoomChoicesPage() {
     const fetchRooms = async () => {
       setLoading(true);
       try {
+        // Include logged-in user email for partner-specific rate codes
+        const user = getUser();
         const res = await fetch("/api/rooms/availability", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -67,6 +70,7 @@ export default function RoomChoicesPage() {
             check_out_date: checkOut,
             person_count: Number(adultParam),
             room_count: Number(roomParam),
+            person_email: user?.email || "",
           }),
         });
         const json = await res.json();
@@ -93,6 +97,7 @@ export default function RoomChoicesPage() {
             const roomsWithPrices = await Promise.all(
               mappedRooms.map(async (room) => {
                 try {
+                  const rateUser = getUser();
                   const rateRes = await fetch("/api/rooms/rates", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -102,6 +107,7 @@ export default function RoomChoicesPage() {
                       total_child_count: Number(childrenParam),
                       check_in_date: checkIn,
                       check_out_date: checkOut,
+                      person_email: rateUser?.email || "",
                     }),
                   });
                   const rateJson = await rateRes.json();

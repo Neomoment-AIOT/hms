@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import HotelList from "./Hotel_List";
 import { hotelsData } from "./Hotel_Data";
 import { LangContext } from "@/app/lang-provider";
+import { getUser } from "@/app/utils/auth";
 import ArabicCalendar from "../ArabicCalendar";
 import { format } from "date-fns";
 
@@ -109,6 +110,8 @@ export default function HotelFilter() {
   const doSearch = async (checkIn: string, checkOut: string, rooms: number, adults: number) => {
     setSearching(true);
     try {
+      // Include logged-in user email for partner-specific rate codes
+      const user = getUser();
       const res = await fetch("/api/hotels/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,6 +120,7 @@ export default function HotelFilter() {
           checkout_date: checkOut,
           room_count: rooms || 1,
           adult_count: adults || 1,
+          person_email: user?.email || "",
         }),
       });
       const json = await res.json();

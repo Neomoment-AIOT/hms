@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       total_child_count: body.total_child_count || 0,
       check_in_date: body.check_in_date,
       check_out_date: body.check_out_date,
+      person_email: body.person_email || "",
     });
 
     if (!result.success) {

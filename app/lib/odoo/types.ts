@@ -129,6 +129,7 @@ export interface HotelSearchRequest {
   checkout_date: string;  // YYYY-MM-DD
   room_count: number;
   adult_count: number;
+  person_email?: string;  // logged-in user email for partner-specific rates
 }
 
 export interface RoomTypeInfo {
@@ -177,6 +178,7 @@ export interface RoomAvailabilityRequest {
   check_out_date: string;    // YYYY-MM-DD
   person_count: number;
   room_count: number;
+  person_email?: string;     // logged-in user email for partner-specific rates
 }
 
 export interface RoomAvailabilityData {
@@ -212,6 +214,7 @@ export interface RoomRatesRequest {
   total_child_count: number;
   check_in_date: string;
   check_out_date: string;
+  person_email?: string;  // logged-in user email for partner-specific rates
 }
 
 export interface RateDetail {
