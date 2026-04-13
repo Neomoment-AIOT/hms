@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { odooPost } from "@/app/lib/odoo/client";
+import { getAuthFromCookies } from "@/app/lib/auth/cookies";
 import type { HotelSearchRequest, HotelSearchResponse } from "@/app/lib/odoo/types";
 
 /**
  * POST /api/hotels/[hotelId]
  * Get single hotel details with availability
  * Calls Odoo: POST /api/hotel/<hotel_id>
+ *
+ * Security: person_id is read from HTTP-only cookie, NOT from request body.
+ * This prevents clients from spoofing another user's partner_id to obtain
+ * their rate code.
  */
 export async function POST(
   request: NextRequest,
@@ -22,6 +27,10 @@ export async function POST(
       );
     }
 
+    // Read partner_id from HTTP-only cookie — authoritative, cannot be spoofed
+    const auth = getAuthFromCookies(request);
+    const person_id = auth?.partnerId || 0;
+
     const result = await odooPost<HotelSearchResponse>(
       `/api/hotel/${hotelId}`,
       {
@@ -29,6 +38,7 @@ export async function POST(
         checkout_date: body.checkout_date,
         room_count: body.room_count || 1,
         adult_count: body.adult_count || 1,
+        person_id,
       }
     );
 

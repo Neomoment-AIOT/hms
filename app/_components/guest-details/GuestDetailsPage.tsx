@@ -39,34 +39,46 @@ export default function GuestDetailsPage() {
 
   const selectedRoom = roomsData.find((r) => r.id === roomTypeId);
 
-  const [checkIn, setCheckIn] = useState<Date>(new Date());
-  const [checkOut, setCheckOut] = useState<Date>(addDays(new Date(), 1));
+  const checkInParam = searchParams.get("checkIn");
+  const checkOutParam = searchParams.get("checkOut");
+
+  const [checkIn, setCheckIn] = useState<Date>(
+    checkInParam ? new Date(checkInParam + "T00:00:00") : new Date()
+  );
+  const [checkOut, setCheckOut] = useState<Date>(
+    checkOutParam ? new Date(checkOutParam + "T00:00:00") : addDays(new Date(), 1)
+  );
   const [apiCountries, setApiCountries] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Room price fetched from /api/rooms/rates (partner-aware)
+  const [roomPrice, setRoomPrice] = useState<number>(0);
+  const [roomPriceLoading, setRoomPriceLoading] = useState(false);
+  // Incremented on auth-change so the rates useEffect re-fires on login/logout
+  const [authVersion, setAuthVersion] = useState(0);
 
   // Hotel detail from API
   const [hotelDetail, setHotelDetail] = useState<{
     name: string; phone: string; star_rating: number; location: string;
     logo: string | null; room_types: { id: number; type: string; pax: number }[];
+    meals?: { id: number; description: string; unit_price: number; child_price: number; meal_type: string; default: boolean }[];
+    services?: { id: number; name: string; unit_price: number; rhythm: string }[];
   } | null>(null);
 
   useEffect(() => {
-    const inDate = searchParams.get("checkIn");
-    const outDate = searchParams.get("checkOut");
+    if (checkInParam) setCheckIn(new Date(checkInParam + "T00:00:00"));
+    if (checkOutParam) setCheckOut(new Date(checkOutParam + "T00:00:00"));
+  }, [checkInParam, checkOutParam]);
 
-    if (inDate) setCheckIn(new Date(inDate + "T00:00:00"));
-    if (outDate) setCheckOut(new Date(outDate + "T00:00:00"));
-  }, [searchParams]);
-
-  // Fetch hotel details from API
+  // Fetch hotel details — BFF reads person_id from HTTP-only cookie automatically
   useEffect(() => {
-    if (!hotelId || !searchParams.get("checkIn") || !searchParams.get("checkOut")) return;
+    if (!hotelId || !checkInParam || !checkOutParam) return;
     fetch(`/api/hotels/${hotelId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        checkin_date: searchParams.get("checkIn"),
-        checkout_date: searchParams.get("checkOut"),
+        checkin_date: checkInParam,
+        checkout_date: checkOutParam,
         room_count: 1,
         adult_count: Number(adultsParam),
       }),
@@ -78,7 +90,48 @@ export default function GuestDetailsPage() {
         }
       })
       .catch(() => {});
-  }, [hotelId, searchParams, adultsParam]);
+  }, [hotelId, checkInParam, checkOutParam, adultsParam]);
+
+  // Re-fetch room rate whenever params or auth state change
+  useEffect(() => {
+    if (!roomTypeId || !checkInParam || !checkOutParam) return;
+    let cancelled = false;
+    setRoomPriceLoading(true);
+    fetch("/api/rooms/rates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        room_type_id: roomTypeId,
+        total_person_count: Number(adultsParam),
+        total_child_count: Number(childrenParam),
+        check_in_date: checkInParam,
+        check_out_date: checkOutParam,
+        // person_id intentionally omitted — BFF reads from HTTP-only cookie
+      }),
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
+          const rate = json.data[0];
+          setRoomPrice(rate.price?.adult || rate.pax_1 || 0);
+        } else {
+          setRoomPrice(0);
+        }
+      })
+      .catch(() => { if (!cancelled) setRoomPrice(0); })
+      .finally(() => { if (!cancelled) setRoomPriceLoading(false); });
+    return () => { cancelled = true; };
+  // authVersion bumps whenever the user logs in/out so we re-fetch with new cookie
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomTypeId, checkInParam, checkOutParam, adultsParam, childrenParam, authVersion]);
+
+  // Listen for login/logout and bump authVersion to re-trigger the rates fetch
+  useEffect(() => {
+    const onAuthChange = () => setAuthVersion((v) => v + 1);
+    window.addEventListener("auth-change", onAuthChange);
+    return () => window.removeEventListener("auth-change", onAuthChange);
+  }, []);
 
   // Fetch countries from API
   useEffect(() => {
@@ -121,9 +174,8 @@ export default function GuestDetailsPage() {
     (meals.lunch ? MEAL_PRICES.lunch : 0) +
     (meals.dinner ? MEAL_PRICES.dinner : 0);
 
-  const roomTotal = selectedRoom ? selectedRoom.price * count : 0;
-  const services = 300;
-  const grandTotal = roomTotal +  mealsTotal;
+  const roomTotal = roomPrice * count;
+  const grandTotal = roomTotal + mealsTotal;
 
   const handleDownloadPDF = () => {
     const labels = getPDFLabels(isArabic);
@@ -141,7 +193,7 @@ export default function GuestDetailsPage() {
       rating: `${effectiveHotelRating} / 5`,
       meals,
       mealPrices: MEAL_PRICES,
-      roomPrice: roomTotal,
+      roomPrice: roomPrice,
       totalAmount: grandTotal,
       isArabic,
       labels,
@@ -155,10 +207,10 @@ export default function GuestDetailsPage() {
       checkIn: format(checkIn, "yyyy-MM-dd"),
       checkOut: format(checkOut, "yyyy-MM-dd"),
       meals,
-      totalAmount: roomTotal + mealsTotal,
+      totalAmount: grandTotal,
       guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
       email: email || "N/A",
-      roomPrice: roomTotal,
+      roomPrice: roomPrice,
       hotelId: hotelId ? Number(hotelId) : undefined,
       bookingId: undefined as string | undefined,
     };
@@ -413,21 +465,33 @@ export default function GuestDetailsPage() {
               <div className="flex justify-between">
                 <span>{isArabic ? `الغرفة ${count} ${effectiveRoomName}` : `Room ${count} ${effectiveRoomName}`}</span>
                 <span className="flex items-center gap-1">
-                  <Riyal /> <span>{roomTotal}</span>
+                  {roomPriceLoading ? (
+                    <span className="text-gray-400 text-xs animate-pulse">{isArabic ? "جاري التحميل..." : "Loading..."}</span>
+                  ) : (
+                    <><Riyal /> <span>{roomTotal.toFixed(2)}</span></>
+                  )}
                 </span>
               </div>
 
               <div className="border-t pt-2 flex justify-between font-semibold">
                 <span>{isArabic ? "الإجمالي" : "Total"}</span>
                 <span className="flex items-center gap-1 bg-orange-100 px-2 rounded">
-                  <Riyal /> <span>{grandTotal}</span>
+                  {roomPriceLoading ? (
+                    <span className="text-gray-400 text-xs animate-pulse">{isArabic ? "جاري التحميل..." : "Loading..."}</span>
+                  ) : (
+                    <><Riyal /> <span>{grandTotal.toFixed(2)}</span></>
+                  )}
                 </span>
               </div>
 
               <div className="flex justify-between font-semibold">
                 <span>{isArabic ? "المبلغ الواجب دفعه" : "Amount to pay"}</span>
                 <span className="flex items-center gap-1 bg-green-100 px-2 rounded">
-                  <Riyal /> <span>{grandTotal}</span>
+                  {roomPriceLoading ? (
+                    <span className="text-gray-400 text-xs animate-pulse">{isArabic ? "جاري التحميل..." : "Loading..."}</span>
+                  ) : (
+                    <><Riyal /> <span>{grandTotal.toFixed(2)}</span></>
+                  )}
                 </span>
               </div>
             </div>

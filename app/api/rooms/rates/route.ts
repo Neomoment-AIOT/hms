@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { odooPost } from "@/app/lib/odoo/client";
+import { getAuthFromCookies } from "@/app/lib/auth/cookies";
 import type { RoomRatesRequest, RoomRatesResponse } from "@/app/lib/odoo/types";
 
 /**
@@ -24,6 +25,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Read partner_id from HTTP-only cookie — authoritative, cannot be spoofed
+    const auth = getAuthFromCookies(request);
+    const person_id = auth?.partnerId || 0;
+
     const result = await odooPost<RoomRatesResponse>("/api/room_rates", {
       room_type_id: body.room_type_id,
       total_person_count: body.total_person_count || 1,
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest) {
       check_in_date: body.check_in_date,
       check_out_date: body.check_out_date,
       person_email: body.person_email || "",
-      person_id: body.person_id || 0,
+      person_id,
     });
 
     if (!result.success) {
