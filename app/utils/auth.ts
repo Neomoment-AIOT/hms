@@ -38,6 +38,11 @@ export async function signIn(
     // (auth itself is in HTTP-only cookies, not here)
     localStorage.setItem("user", JSON.stringify(user));
 
+    // Notify all components that auth state changed (e.g. re-fetch rates with partner_id)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-change"));
+    }
+
     return { ok: true, user };
   } catch {
     return { ok: false, error: "Network error. Please try again." };
@@ -134,6 +139,11 @@ export async function signOut(): Promise<void> {
     // Ignore network errors on signout
   }
   localStorage.removeItem("user");
+
+  // Notify all components that auth state changed (e.g. re-fetch rates without partner_id)
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("auth-change"));
+  }
 }
 
 // ─── Get Current User (from localStorage cache) ──────────────

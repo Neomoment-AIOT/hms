@@ -190,7 +190,14 @@ export default function HotelFilter() {
 
     // Back/forward navigation — always re-run
     window.addEventListener("popstate", runSearch);
-    return () => window.removeEventListener("popstate", runSearch);
+
+    // Re-search when user logs in/out (prices change based on partner rate code)
+    window.addEventListener("auth-change", runSearch);
+
+    return () => {
+      window.removeEventListener("popstate", runSearch);
+      window.removeEventListener("auth-change", runSearch);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
