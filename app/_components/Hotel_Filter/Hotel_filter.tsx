@@ -156,20 +156,22 @@ export default function HotelFilter() {
     );
   };
 
-  /* Auto-search on mount: reads directly from URL params (no stale closure issue) */
+  /* Auto-search on mount: read directly from window.location so we bypass
+     any SSR/hydration timing issues with useSearchParams reference stability */
   useEffect(() => {
-    const ci = searchParams.get("checkIn");
-    const co = searchParams.get("checkOut");
+    const params = new URLSearchParams(window.location.search);
+    const ci = params.get("checkIn");
+    const co = params.get("checkOut");
     if (ci && co) {
       doSearch(
         ci,
         co,
-        Number(searchParams.get("room") ?? 1),
-        Number(searchParams.get("adult") ?? 1)
+        Number(params.get("room") ?? 1),
+        Number(params.get("adult") ?? 1)
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
   /* ---------------- POSITION UPDATE ---------------- */
   const updatePositions = () => {
