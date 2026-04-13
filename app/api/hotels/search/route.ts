@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
       room_count: body.room_count,
       adult_count: body.adult_count,
       person_email: body.person_email || "",
+      person_id: body.person_id || 0,
     });
 
     if (!result.success) {
