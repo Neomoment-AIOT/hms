@@ -110,7 +110,7 @@ export default function HotelFilter() {
   const doSearch = async (checkIn: string, checkOut: string, rooms: number, adults: number) => {
     setSearching(true);
     try {
-      // Include logged-in user email for partner-specific rate codes
+      // Include logged-in user info for partner-specific rate codes
       const user = getUser();
       const res = await fetch("/api/hotels/search", {
         method: "POST",
@@ -121,6 +121,7 @@ export default function HotelFilter() {
           room_count: rooms || 1,
           adult_count: adults || 1,
           person_email: user?.email || "",
+          person_id: user?.partner_id || 0,
         }),
       });
       const json = await res.json();

@@ -59,7 +59,7 @@ export default function RoomChoicesPage() {
     const fetchRooms = async () => {
       setLoading(true);
       try {
-        // Include logged-in user email for partner-specific rate codes
+        // Include logged-in user info for partner-specific rate codes
         const user = getUser();
         const res = await fetch("/api/rooms/availability", {
           method: "POST",
@@ -71,6 +71,7 @@ export default function RoomChoicesPage() {
             person_count: Number(adultParam),
             room_count: Number(roomParam),
             person_email: user?.email || "",
+            person_id: user?.partner_id || 0,
           }),
         });
         const json = await res.json();
@@ -108,6 +109,7 @@ export default function RoomChoicesPage() {
                       check_in_date: checkIn,
                       check_out_date: checkOut,
                       person_email: rateUser?.email || "",
+                      person_id: rateUser?.partner_id || 0,
                     }),
                   });
                   const rateJson = await rateRes.json();

@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
         person_count: body.person_count || 1,
         room_count: body.room_count || 1,
         person_email: body.person_email || "",
+        person_id: body.person_id || 0,
       }
     );
 
