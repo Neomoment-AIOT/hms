@@ -13,23 +13,17 @@ const Riyal = () => (
   <img src="/Riyal_Black.png" alt="Riyal" className="inline w-6 h-6" />
 );
 
-const MEAL_PRICES = {
-  breakfast: 120,
-  lunch: 150,
-  dinner: 100,
-} as const;
-
-const mealKeys = ["breakfast", "lunch", "dinner"] as const;
-type MealKey = (typeof mealKeys)[number];
 
 /* ---------------- TYPES ---------------- */
+
+type MealItem = { id: number; description: string; unit_price: number };
 
 type BookingData = {
   roomName: string;
   roomCount: number;
   checkIn: string;
   checkOut: string;
-  meals: Record<MealKey, boolean>;
+  meals: MealItem[];
   totalAmount: number;
   guestName?: string;
   email?: string;
@@ -71,12 +65,11 @@ export default function PaymentSuccessPage() {
 
   const { roomName, roomCount, checkIn, checkOut, meals, totalAmount, guestName, email } = bookingData;
 
+  const mealTotal = (meals || []).reduce((sum, m) => sum + m.unit_price, 0);
+  const roomPrice = totalAmount - mealTotal;
+
   const handleDownloadPDF = () => {
     const labels = getPDFLabels(isArabic);
-    const mealTotal = mealKeys.reduce(
-      (sum, m) => sum + (meals[m] ? MEAL_PRICES[m] : 0),
-      0
-    );
     generateBookingPDF({
       bookingRef: bookingData?.bookingId || "REF202503091738433773",
       guestName: guestName || "Guest",
@@ -91,21 +84,13 @@ export default function PaymentSuccessPage() {
         : "BeAl Aqiq, King Fahd Branch Rd, Riyadh 13515, Saudi Arabia",
       hotelPhone: "+966 920010417",
       rating: "3 / 5",
-      meals,
-      mealPrices: MEAL_PRICES,
-      roomPrice: totalAmount - mealTotal,
+      selectedMeals: (meals || []).map((m) => ({ description: m.description, unit_price: m.unit_price })),
+      roomPrice,
       totalAmount,
       isArabic,
       labels,
     });
   };
-
-  const selectedMeals = mealKeys.filter((meal) => meals[meal]);
-  const mealTotal = mealKeys.reduce(
-    (sum, meal) => sum + (meals[meal] ? MEAL_PRICES[meal] : 0),
-    0
-  );
-  const roomPrice = totalAmount - mealTotal;
 
   return (
     <div
@@ -164,16 +149,12 @@ export default function PaymentSuccessPage() {
           <div className="flex flex-col sm:flex-row justify-between gap-2">
             <span>{isArabic ? "خدمات الوجبات" : "Meal Services"}</span>
             <span className="flex flex-wrap gap-2 md:gap-3">
-              {selectedMeals.length ? selectedMeals.map((meal) => (
+              {(meals || []).length > 0 ? (meals || []).map((meal) => (
                 <span
-                  key={meal}
+                  key={meal.id}
                   className="bg-purple-200 px-3 py-1 rounded-lg text-sm"
                 >
-                  {isArabic
-                    ? meal === "breakfast" ? "إفطار" :
-                      meal === "lunch" ? "غداء" : "عشاء"
-                    : meal.charAt(0).toUpperCase() + meal.slice(1)
-                  }
+                  {meal.description}
                 </span>
               )) : (
                 <span className="text-gray-400">{isArabic ? "لم يتم اختيار وجبة" : "No Meal Selected"}</span>
@@ -194,16 +175,17 @@ export default function PaymentSuccessPage() {
           <h4 className="font-semibold mb-4 text-xl">{isArabic ? "تفصيل السعر" : "Price Breakdown"}</h4>
 
           <div className="space-y-4 text-sm md:text-base">
-            {mealKeys.map((meal) => (
-              <div key={meal} className="flex justify-between">
-                <span>{isArabic
-                  ? meal === "breakfast" ? "إفطار" :
-                    meal === "lunch" ? "غداء" : "عشاء"
-                  : meal.charAt(0).toUpperCase() + meal.slice(1)
-                }</span>
-                <span className="font-medium"><Riyal /> {meals[meal] ? MEAL_PRICES[meal] : "0.00"}</span>
+            {(meals || []).length > 0 ? (meals || []).map((meal) => (
+              <div key={meal.id} className="flex justify-between">
+                <span>{meal.description}</span>
+                <span className="font-medium"><Riyal /> {meal.unit_price.toFixed(2)}</span>
               </div>
-            ))}
+            )) : (
+              <div className="flex justify-between">
+                <span>{isArabic ? "خدمات الوجبات" : "Meal Services"}</span>
+                <span className="font-medium text-gray-400">0.00</span>
+              </div>
+            )}
 
             <div className="flex justify-between">
               <span>{isArabic ? `الغرفة ${roomCount} ${roomName}` : `Room ${roomCount} ${roomName}`}</span>
