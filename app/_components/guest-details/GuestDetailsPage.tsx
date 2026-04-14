@@ -194,72 +194,81 @@ export default function GuestDetailsPage() {
   };
 
   const handleContinueToPayment = async () => {
-    const bookingData = {
-      roomName: effectiveRoomName,
-      roomCount: count,
-      checkIn: format(checkIn, "yyyy-MM-dd"),
-      checkOut: format(checkOut, "yyyy-MM-dd"),
-      meals: selectedMeals.map((m) => ({ id: m.id, description: m.description, unit_price: m.unit_price })),
-      totalAmount: grandTotal,
-      guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
-      email: email || "N/A",
-      roomPrice: roomPrice,
-      hotelId: hotelId ? Number(hotelId) : undefined,
-      bookingId: undefined as string | undefined,
-    };
-
-    // Try to create booking via API if hotelId is present
-    if (hotelId) {
-      setSubmitting(true);
-      try {
-        const res = await fetch("/api/bookings/confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            check_in_date: format(checkIn, "yyyy-MM-dd"),
-            check_out_date: format(checkOut, "yyyy-MM-dd"),
-            hotel_id: Number(hotelId),
-            customer_details: {
-              first_name: firstName || "Guest",
-              last_name: lastName || "",
-              email: email || "",
-              mobile: "",
-            },
-            rooms: [{
-              room_type_id: roomTypeId,
-              pax: Number(adultsParam) + Number(childrenParam),
-              adults: Number(adultsParam),
-              children: Number(childrenParam),
-            }],
-          }),
-        });
-
-        const json = await res.json();
-        setSubmitting(false);
-
-        if (json.ok) {
-          // Extract booking ID from response
-          const bid = json.data?.booking_id || json.data?.id || json.data?.name || "";
-          bookingData.bookingId = String(bid);
-          sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
-          router.push(`/PayementSuccess?bookingId=${bid}`);
-          return;
-        } else if (res.status === 401) {
-          alert(isArabic ? "يرجى تسجيل الدخول أولاً لإتمام الحجز" : "Please sign in first to complete your booking");
-          return;
-        } else {
-          alert(json.error || (isArabic ? "فشل تأكيد الحجز" : "Booking confirmation failed"));
-          return;
-        }
-      } catch {
-        setSubmitting(false);
-        // Fall through to sessionStorage fallback
-      }
+    if (grandTotal <= 0) {
+      alert(isArabic ? "المبلغ الإجمالي غير صحيح" : "Invalid total amount");
+      return;
     }
 
-    // Fallback: store in sessionStorage (no API)
-    sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
-    router.push("/PayementSuccess");
+    setSubmitting(true);
+
+    // Build the booking snapshot we'll restore after Noon redirects back
+    const bookingData: {
+      roomName: string; roomCount: number; checkIn: string; checkOut: string;
+      meals: { id: number; description: string; unit_price: number }[];
+      totalAmount: number; guestName: string; email: string; roomPrice: number;
+      hotelId?: number; roomTypeId: number; adults: number; children: number;
+      bookingId?: string;
+    } = {
+      roomName:  effectiveRoomName,
+      roomCount: count,
+      checkIn:   format(checkIn, "yyyy-MM-dd"),
+      checkOut:  format(checkOut, "yyyy-MM-dd"),
+      meals:     selectedMeals.map((m) => ({ id: m.id, description: m.description, unit_price: m.unit_price })),
+      totalAmount: grandTotal,
+      guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
+      email:     email || "N/A",
+      roomPrice,
+      hotelId:   hotelId ? Number(hotelId) : undefined,
+      roomTypeId,
+      adults:    Number(adultsParam),
+      children:  Number(childrenParam),
+    };
+
+    // ── Step 1: Create Noon order via our BFF ──────────────────────
+    // Use a unique reference: timestamp + hotelId so it is always distinct
+    const orderRef = `HMS-${hotelId || "0"}-${Date.now()}`;
+
+    try {
+      const initiateRes = await fetch("/api/payment/initiate", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          amount:      grandTotal,
+          currency:    "SAR",
+          orderRef,
+          description: `Hotel booking — ${effectiveHotelName} (${format(checkIn, "dd MMM")} – ${format(checkOut, "dd MMM yyyy")})`,
+          hotelId:     hotelId ? Number(hotelId) : undefined,
+          roomTypeId,
+          checkIn:  format(checkIn, "yyyy-MM-dd"),
+          checkOut: format(checkOut, "yyyy-MM-dd"),
+          customer: {
+            firstName: firstName || "Guest",
+            lastName:  lastName  || "",
+            email:     email     || "",
+          },
+        }),
+      });
+
+      const initiateJson = await initiateRes.json();
+
+      if (!initiateRes.ok || !initiateJson.ok) {
+        setSubmitting(false);
+        alert(initiateJson.error || (isArabic ? "تعذّر بدء الدفع" : "Could not initiate payment"));
+        return;
+      }
+
+      // ── Step 2: Save booking snapshot so /payment/callback can restore it ──
+      bookingData.bookingId = orderRef;
+      sessionStorage.setItem("bookingData",    JSON.stringify(bookingData));
+      sessionStorage.setItem("noonOrderId",    String(initiateJson.noonOrderId));
+
+      // ── Step 3: Redirect to Noon hosted checkout ───────────────────
+      window.location.href = initiateJson.checkoutWebUrl;
+
+    } catch {
+      setSubmitting(false);
+      alert(isArabic ? "خطأ في الاتصال بخدمة الدفع" : "Error connecting to payment service");
+    }
   };
 
 
