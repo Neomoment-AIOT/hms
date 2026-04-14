@@ -29,6 +29,7 @@ type BookingData = {
   email?: string;
   roomPrice?: number;
   bookingId?: string;
+  noonOrderId?: string;
   hotelId?: number;
 };
 
@@ -48,9 +49,11 @@ export default function PaymentSuccessPage() {
     const storedData = sessionStorage.getItem("bookingData");
     if (storedData) {
       const parsed = JSON.parse(storedData);
-      // Merge bookingId from URL if present
-      const urlBookingId = searchParams.get("bookingId");
-      if (urlBookingId) parsed.bookingId = urlBookingId;
+      // Merge IDs from URL if present (Noon callback sends noonOrderId)
+      const urlBookingId  = searchParams.get("bookingId");
+      const urlNoonOrder  = searchParams.get("noonOrderId");
+      if (urlBookingId) parsed.bookingId   = urlBookingId;
+      if (urlNoonOrder) parsed.noonOrderId = urlNoonOrder;
       setBookingData(parsed);
     }
   }, [searchParams]);
@@ -71,7 +74,9 @@ export default function PaymentSuccessPage() {
   const handleDownloadPDF = () => {
     const labels = getPDFLabels(isArabic);
     generateBookingPDF({
-      bookingRef: bookingData?.bookingId || "REF202503091738433773",
+      bookingRef: bookingData?.noonOrderId
+        ? `NOON-${bookingData.noonOrderId}`
+        : (bookingData?.bookingId || "—"),
       guestName: guestName || "Guest",
       email: email || "N/A",
       roomName,
@@ -142,7 +147,11 @@ export default function PaymentSuccessPage() {
         <div className="text-sm md:text-base space-y-4">
           <div className="flex justify-between gap-4">
             <span className="shrink-0">{isArabic ? "مرجع الحجز" : "Booking Ref."}</span>
-            <span className="truncate">{bookingData?.bookingId || "REF202503091738433773"}</span>
+            <span className="truncate">
+              {bookingData?.noonOrderId
+                ? `NOON-${bookingData.noonOrderId}`
+                : bookingData?.bookingId || "—"}
+            </span>
           </div>
 
           {/* Meal Summary */}
