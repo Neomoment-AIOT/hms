@@ -16,8 +16,8 @@ export type BookingPDFData = {
   hotelAddress: string;
   hotelPhone: string;
   rating: string;
-  meals: { breakfast: boolean; lunch: boolean; dinner: boolean };
-  mealPrices: { breakfast: number; lunch: number; dinner: number };
+  /** Array of meals the guest actually selected (from API) */
+  selectedMeals: { description: string; unit_price: number }[];
   roomPrice: number;
   totalAmount: number;
   isArabic?: boolean;
@@ -34,13 +34,7 @@ function buildHTML(data: BookingPDFData): string {
     ? "'Cairo', 'Segoe UI', Tahoma, sans-serif"
     : "'Segoe UI', Tahoma, Geneva, sans-serif";
 
-  const mealNames = ["breakfast", "lunch", "dinner"] as const;
-  const mealLabels = { breakfast: L.breakfast, lunch: L.lunch, dinner: L.dinner };
-
-  const mealTotal = mealNames.reduce(
-    (sum, m) => sum + (data.meals[m] ? data.mealPrices[m] : 0),
-    0
-  );
+  const mealTotal = data.selectedMeals.reduce((sum, m) => sum + m.unit_price, 0);
 
   const row = (label: string, value: string) => `
     <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #e6e6e6;">
@@ -114,16 +108,11 @@ function buildHTML(data: BookingPDFData): string {
     <!-- MEAL SERVICES -->
     ${sectionHeader(L.mealServices)}
     <div style="padding:1px 0;">
-      ${mealNames
-        .map((meal) => {
-          const selected = data.meals[meal];
-          const price = selected ? data.mealPrices[meal] : 0;
-          const value = selected
-            ? `${L.currency} ${price.toFixed(2)}`
-            : L.notSelected;
-          return row(mealLabels[meal], value);
-        })
-        .join("")}
+      ${data.selectedMeals.length > 0
+        ? data.selectedMeals
+            .map((m) => row(m.description, `${L.currency} ${m.unit_price.toFixed(2)}`))
+            .join("")
+        : row(L.mealServices, L.notSelected)}
     </div>
 
     <!-- PRICE BREAKDOWN -->

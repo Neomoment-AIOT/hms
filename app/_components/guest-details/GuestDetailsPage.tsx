@@ -14,13 +14,7 @@ const countries: string[] = [];
 // NOTE: Hardcoded roomsData COMMENTED OUT for API testing — room info should come from URL params
 const roomsData: { id: number; name: string; price: number }[] = [];
 
-// NOTE: Hardcoded MEAL_PRICES COMMENTED OUT for API testing — should come from Odoo hotel services API (M4)
-// Keeping values for now since Odoo meal pricing API does not exist yet
-const MEAL_PRICES = {
-  breakfast: 120,
-  lunch: 150,
-  dinner: 100,
-};
+// Meals are loaded dynamically from the hotel API (hotelDetail.meals)
 
 const Riyal = () => <img src="/Riyal_Black.png" alt="Riyal" className="inline w-4 h-4" />;
 
@@ -159,20 +153,20 @@ export default function GuestDetailsPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
 
-  const [meals, setMeals] = useState({
-    breakfast: false,
-    lunch: false,
-    dinner: false,
-  });
+  // Meals selected by ID — populated dynamically from hotelDetail.meals
+  const [selectedMealIds, setSelectedMealIds] = useState<Set<number>>(new Set());
 
-  const toggleMeal = (meal: "breakfast" | "lunch" | "dinner") => {
-    setMeals((prev) => ({ ...prev, [meal]: !prev[meal] }));
+  const toggleMeal = (id: number) => {
+    setSelectedMealIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   };
 
-  const mealsTotal =
-    (meals.breakfast ? MEAL_PRICES.breakfast : 0) +
-    (meals.lunch ? MEAL_PRICES.lunch : 0) +
-    (meals.dinner ? MEAL_PRICES.dinner : 0);
+  const apiMeals = hotelDetail?.meals || [];
+  const selectedMeals = apiMeals.filter((m) => selectedMealIds.has(m.id));
+  const mealsTotal = selectedMeals.reduce((sum, m) => sum + m.unit_price, 0);
 
   const roomTotal = roomPrice * count;
   const grandTotal = roomTotal + mealsTotal;
@@ -191,8 +185,7 @@ export default function GuestDetailsPage() {
       hotelAddress: effectiveHotelLocation || "N/A",
       hotelPhone: effectiveHotelPhone ? `+966 ${effectiveHotelPhone}` : "N/A",
       rating: `${effectiveHotelRating} / 5`,
-      meals,
-      mealPrices: MEAL_PRICES,
+      selectedMeals: selectedMeals.map((m) => ({ description: m.description, unit_price: m.unit_price })),
       roomPrice: roomPrice,
       totalAmount: grandTotal,
       isArabic,
@@ -206,7 +199,7 @@ export default function GuestDetailsPage() {
       roomCount: count,
       checkIn: format(checkIn, "yyyy-MM-dd"),
       checkOut: format(checkOut, "yyyy-MM-dd"),
-      meals,
+      meals: selectedMeals.map((m) => ({ id: m.id, description: m.description, unit_price: m.unit_price })),
       totalAmount: grandTotal,
       guestName: `${firstName || "Guest"} ${lastName || ""}`.trim(),
       email: email || "N/A",
@@ -425,18 +418,22 @@ export default function GuestDetailsPage() {
             <div className="flex flex-col gap-2">
               <span className="text-gray-500">{isArabic ? "اختر الوجبة/الوجبات" : "Select Meal(s)"}</span>
               <div className="flex gap-4 flex-wrap">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={meals.breakfast} onChange={() => toggleMeal("breakfast")} />
-                  {isArabic ? <>إفطار (+ <Riyal /> {MEAL_PRICES.breakfast})</> : <>Breakfast (+ <Riyal /> {MEAL_PRICES.breakfast})</>}
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={meals.lunch} onChange={() => toggleMeal("lunch")} />
-                  {isArabic ? <>غداء (+ <Riyal /> {MEAL_PRICES.lunch})</> : <>Lunch (+ <Riyal /> {MEAL_PRICES.lunch})</>}
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={meals.dinner} onChange={() => toggleMeal("dinner")} />
-                  {isArabic ? <>عشاء (+ <Riyal /> {MEAL_PRICES.dinner})</> : <>Dinner (+ <Riyal /> {MEAL_PRICES.dinner})</>}
-                </label>
+                {apiMeals.length > 0 ? (
+                  apiMeals.map((meal) => (
+                    <label key={meal.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedMealIds.has(meal.id)}
+                        onChange={() => toggleMeal(meal.id)}
+                      />
+                      {meal.description} (+ <Riyal /> {meal.unit_price})
+                    </label>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-400 italic">
+                    {isArabic ? "جاري تحميل الوجبات..." : "Loading meals..."}
+                  </span>
+                )}
               </div>
             </div>
 
