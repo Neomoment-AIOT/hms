@@ -4,9 +4,15 @@ import Image from "next/image";
 import { useContext } from "react";
 import { LangContext } from "@/app/lang-provider";
 
-// NOTE: Hardcoded room types COMMENTED OUT for API testing
-// Should come from Odoo hotel detail API or amenities API (M1)
-const rooms: { nameEn: string; nameAr: string; image: string }[] = [];
+// NOTE: Hardcoded room data — will be replaced by Odoo hotel detail API (M1)
+const rooms: { nameEn: string; nameAr: string; image: string }[] = [
+  { nameEn: "Luxury Room",    nameAr: "غرفة فاخرة",         image: "/Hotel_Room/luxuryroom.jpeg"  },
+  { nameEn: "Deluxe Room",    nameAr: "غرفة ديلوكس",        image: "/Hotel_Room/deluxeroom.jpeg"  },
+  { nameEn: "Guest Room",     nameAr: "غرفة الضيوف",        image: "/Hotel_Room/guestroom.jpeg"   },
+  { nameEn: "Studio Suite",   nameAr: "جناح ستوديو",        image: "/Hotel_Room/studiosuite.jpeg" },
+  { nameEn: "Family Room",    nameAr: "غرفة عائلية",        image: "/Hotel_Room/familyroom.jpeg"  },
+  { nameEn: "Dining Suite",   nameAr: "جناح الطعام",        image: "/Hotel_Room/dinings.jpeg"     },
+];
 
 export default function Room() {
   const { lang } = useContext(LangContext);
@@ -30,11 +36,6 @@ export default function Room() {
         </div>
 
         {/* Room Cards */}
-        {rooms.length === 0 && (
-          <p className="text-center text-red-500 py-8">
-            {isArabic ? "لا توجد غرف متاحة - بانتظار API من Odoo (M1)" : "No rooms available — waiting for Odoo API (M1)"}
-          </p>
-        )}
         <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {rooms.map((room) => (
             <div
