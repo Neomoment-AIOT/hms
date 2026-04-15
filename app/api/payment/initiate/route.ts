@@ -94,7 +94,9 @@ export async function POST(request: NextRequest) {
       reference: orderRef,
       amount:    Number(amount.toFixed(2)),
       currency,
-      name:      (body.description || "Hotel Booking").slice(0, 50), // Noon caps name at 50 chars
+      // Noon rejects Unicode special chars (em-dash, en-dash, etc) and has a ~50 char limit
+      // Keep name simple and ASCII-only. Guest details are in other fields / the reference.
+      name:      "Hotel Room Booking",
       channel,     // ← must be in order, NOT configuration
       category,    // ← must be in order, NOT configuration
     },
