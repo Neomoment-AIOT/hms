@@ -3,9 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * POST /api/payment/verify
  *
- * Re-fetches the Noon order from Noon's servers and confirms the payment
- * status. NEVER trust the status from the browser redirect — always verify
- * server-side before marking a booking as paid.
+ * Re-fetches the Noon order from Noon's servers and confirms payment status.
+ * NEVER trust the status from the browser redirect — always verify server-side.
  *
  * Body:
  *   noonOrderId   number | string   – the orderId Noon gave us at initiate
@@ -36,21 +35,20 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 2. Noon config ───────────────────────────────────────────────
-  const businessId = process.env.NOON_BUSINESS_IDENTIFIER;
-  const appId      = process.env.NOON_APP_IDENTIFIER;
-  const appKey     = process.env.NOON_APP_KEY;
-  const noonEnv    = process.env.NOON_ENV || "test";
+  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER
+    || `${process.env.NOON_PAYMENT_BUSINESS_ID}.${process.env.NOON_PAYMENT_APP_NAME}`;
 
-  if (!businessId || !appId || !appKey) {
+  const appKey = process.env.NOON_PAYMENT_APP_KEY;
+  const mode   = process.env.NOON_PAYMENT_MODE || "Test";
+
+  const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
+    .replace(/\/$/, "");
+
+  if (!tokenIdentifier || tokenIdentifier === "." || !appKey) {
     return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
   }
 
-  const isLive    = noonEnv === "live";
-  const apiBase   = isLive
-    ? "https://api.noonpayments.com/payment/v1"
-    : "https://api-test.noonpayments.com/payment/v1";
-  const keyPrefix = isLive ? "Key_Live" : "Key_Test";
-  const authHeader = `${keyPrefix} ${businessId}.${appId}:${appKey}`;
+  const authHeader = `Key_${mode} ${tokenIdentifier}:${appKey}`;
 
   // ── 3. Fetch order from Noon ─────────────────────────────────────
   let noonRes: Response;
@@ -79,13 +77,12 @@ export async function POST(request: NextRequest) {
   const status: NoonOrderStatus = order?.status;
   const isPaid = status === "CAPTURED";
 
-  // Amount Noon captured (for your records)
-  const capturedAmount: number = order?.amount ?? 0;
+  const capturedAmount: number = order?.amount   ?? 0;
   const currency: string       = order?.currency ?? "SAR";
-  const reference: string      = order?.reference ?? "";   // your orderRef
+  const reference: string      = order?.reference ?? "";  // your HMS-xxx-timestamp
 
   return NextResponse.json({
-    ok:      true,
+    ok: true,
     isPaid,
     status,
     noonOrderId,

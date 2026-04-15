@@ -26,16 +26,16 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
   // ── 2. Verify Noon signature ─────────────────────────────────────
-  // Noon sends: Authorization: Key_Test {businessId}.{appId}:{signature}
-  // where signature = HMAC-SHA256(rawBody, appKey)
+  // Noon sends: Authorization: Key_Test {tokenIdentifier}:{hmac-signature}
+  // Signature = HMAC-SHA256(rawBody, appKey)
   const authHeader = request.headers.get("Authorization") || "";
-  const appKey     = process.env.NOON_APP_KEY || "";
+  const appKey     = process.env.NOON_PAYMENT_APP_KEY || "";
 
   let signatureValid = false;
 
   if (appKey && authHeader) {
     try {
-      // Extract the signature portion after the last ":"
+      // Extract the part after the last ":"
       const signaturePart = authHeader.split(":").pop() || "";
       const expected = createHmac("sha256", appKey)
         .update(rawBody)
@@ -66,12 +66,12 @@ export async function POST(request: NextRequest) {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   // Useful fields to log individually for quick scanning
-  const order   = (payload.order   as Record<string, unknown>) || {};
-  const result  = (payload.result  as Record<string, unknown>) || {};
+  const order  = (payload.order  as Record<string, unknown>) || {};
+  const result = (payload.result as Record<string, unknown>) || {};
 
   console.log("[webhook/noon] orderId:    ", order.id);
-  console.log("[webhook/noon] reference:  ", order.reference);   // your HMS-xxx-timestamp
-  console.log("[webhook/noon] status:     ", order.status);      // CAPTURED / FAILED etc.
+  console.log("[webhook/noon] reference:  ", order.reference);  // your HMS-xxx-timestamp
+  console.log("[webhook/noon] status:     ", order.status);     // CAPTURED / FAILED etc.
   console.log("[webhook/noon] amount:     ", order.amount, order.currency);
   console.log("[webhook/noon] resultCode: ", result.code);
   console.log("[webhook/noon] resultMsg:  ", result.message);
@@ -85,6 +85,5 @@ export async function POST(request: NextRequest) {
   // }
 
   // ── 6. Always return 200 immediately ─────────────────────────────
-  // Noon retries if it gets anything other than 2xx
   return NextResponse.json({ received: true }, { status: 200 });
 }
