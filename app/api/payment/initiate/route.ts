@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       currency,
       // Noon rejects Unicode special chars (em-dash, en-dash, etc) and has a ~50 char limit
       // Keep name simple and ASCII-only. Guest details are in other fields / the reference.
-      name:      "Hotel Room Booking",
+      name:      "Hotel Booking",
       channel,     // ← must be in order, NOT configuration
       category,    // ← must be in order, NOT configuration
     },
@@ -139,17 +139,21 @@ export async function POST(request: NextRequest) {
   const noonData = await noonRes.json();
 
   // ── 5. Check Noon response ───────────────────────────────────────
-  if (!noonRes.ok || noonData?.result?.code !== 0) {
-    console.error("[payment/initiate] Noon error:", JSON.stringify(noonData));
+  // Noon uses top-level `resultCode` (not `result.code`) and data lives inside `result`
+  if (!noonRes.ok || noonData.resultCode !== 0) {
+    console.error("[payment/initiate] Noon error response:", JSON.stringify(noonData));
     return NextResponse.json(
-      { ok: false, error: noonData?.result?.message || "Payment initiation failed" },
+      { ok: false, error: noonData?.message || "Payment initiation failed" },
       { status: 502 }
     );
   }
 
-  const { orderId, checkoutWebUrl } = noonData.resultData;
+  // Noon response structure: result.checkoutData.postUrl + result.order.id
+  const checkoutWebUrl = noonData.result?.checkoutData?.postUrl;
+  const orderId        = noonData.result?.order?.id;
 
   if (!checkoutWebUrl) {
+    console.error("[payment/initiate] Missing postUrl in Noon response");
     return NextResponse.json({ ok: false, error: "No checkout URL returned from Noon" }, { status: 502 });
   }
 

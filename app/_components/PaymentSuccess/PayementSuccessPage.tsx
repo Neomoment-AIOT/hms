@@ -42,27 +42,83 @@ export default function PaymentSuccessPage() {
   const isArabic = lang === "ar";
 
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
+  const [loadError, setLoadError]     = useState<string | null>(null);
 
   /* ---------------- LOAD DATA ---------------- */
 
   useEffect(() => {
+    const urlNoonOrder  = searchParams.get("noonOrderId");
+    const urlBookingId  = searchParams.get("bookingId");
+
+    // ── Primary: sessionStorage (set by GuestDetailsPage before redirect) ──
     const storedData = sessionStorage.getItem("bookingData");
     if (storedData) {
-      const parsed = JSON.parse(storedData);
-      // Merge IDs from URL if present (Noon callback sends noonOrderId)
-      const urlBookingId  = searchParams.get("bookingId");
-      const urlNoonOrder  = searchParams.get("noonOrderId");
-      if (urlBookingId) parsed.bookingId   = urlBookingId;
-      if (urlNoonOrder) parsed.noonOrderId = urlNoonOrder;
-      setBookingData(parsed);
+      try {
+        const parsed = JSON.parse(storedData);
+        if (urlBookingId) parsed.bookingId   = urlBookingId;
+        if (urlNoonOrder) parsed.noonOrderId = urlNoonOrder;
+        setBookingData(parsed);
+        return;
+      } catch {
+        // fall through to API fallback
+      }
     }
-  }, [searchParams]);
+
+    // ── Fallback: no sessionStorage (e.g. page refresh, cross-origin dev via ngrok)
+    // Fetch what we can from the verify API and show a minimal success page.
+    if (urlNoonOrder) {
+      fetch("/api/payment/verify", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ noonOrderId: urlNoonOrder }),
+      })
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.ok && json.isPaid) {
+            setBookingData({
+              roomName:    "Hotel Room",
+              roomCount:   1,
+              checkIn:     "",
+              checkOut:    "",
+              meals:       [],
+              totalAmount: json.capturedAmount ?? 0,
+              noonOrderId: String(urlNoonOrder),
+              bookingId:   urlBookingId ?? undefined,
+            });
+          } else {
+            setLoadError(isArabic ? "لم يتم تأكيد الدفع." : "Payment not confirmed.");
+          }
+        })
+        .catch(() => {
+          setLoadError(isArabic ? "تعذّر تحميل بيانات الحجز." : "Could not load booking data.");
+        });
+      return;
+    }
+
+    setLoadError(isArabic ? "لا توجد بيانات حجز." : "No booking data found.");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!bookingData) {
     return (
-      <p className={`text-center mt-32 text-xl ${isArabic ? "font-arabic" : ""}`}>
-        {isArabic ? "جارٍ التحميل..." : "Loading..."}
-      </p>
+      <div className={`text-center mt-32 text-xl ${isArabic ? "font-arabic" : ""}`}>
+        {loadError ? (
+          <div className="space-y-4">
+            <p className="text-red-600">{loadError}</p>
+            <button
+              onClick={() => router.push("/hotel")}
+              className="px-6 py-2 bg-teal-700 text-white rounded-lg text-base"
+            >
+              {isArabic ? "العودة للرئيسية" : "Back to Hotels"}
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-500">{isArabic ? "جارٍ التحميل..." : "Loading…"}</p>
+          </div>
+        )}
+      </div>
     );
   }
 

@@ -68,20 +68,22 @@ export async function POST(request: NextRequest) {
 
   const noonData = await noonRes.json();
 
-  if (!noonRes.ok || noonData?.result?.code !== 0) {
+  // FIX: Noon uses top-level `resultCode` (not `result.code`) and data is inside `result`
+  if (!noonRes.ok || noonData?.resultCode !== 0) {
     console.error("[payment/verify] Noon error:", JSON.stringify(noonData));
     return NextResponse.json(
-      { ok: false, error: noonData?.result?.message || "Could not retrieve order from Noon" },
+      { ok: false, error: noonData?.message || "Could not retrieve order from Noon" },
       { status: 502 }
     );
   }
 
   // ── 4. Inspect order status ──────────────────────────────────────
-  const order = noonData.resultData?.order;
+  // FIX: Data is inside `result.order`, not `resultData.order`
+  const order = noonData.result?.order;
   const status: NoonOrderStatus = order?.status;
   const isPaid = status === "CAPTURED";
 
-  const capturedAmount: number = order?.amount   ?? 0;
+  const capturedAmount: number = order?.totalCapturedAmount ?? order?.amount ?? 0;
   const currency: string       = order?.currency ?? "SAR";
   const reference: string      = order?.reference ?? "";  // your HMS-xxx-timestamp
 
