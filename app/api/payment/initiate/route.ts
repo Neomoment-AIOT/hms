@@ -48,30 +48,43 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 2. Noon config — read from env, never from client ────────────
-  // TOKEN_IDENTIFIER = BUSINESS_ID.APP_NAME (Noon combines them as a single token)
-  // If client provided it pre-combined, use it directly.
-  // If not, we build it from BUSINESS_ID + APP_NAME.
-  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER
-    || `${process.env.NOON_PAYMENT_BUSINESS_ID}.${process.env.NOON_PAYMENT_APP_NAME}`;
-
-  const appKey   = process.env.NOON_PAYMENT_APP_KEY;
-  const mode     = process.env.NOON_PAYMENT_MODE || "Test";          // "Test" | "Live"
+  const mode     = process.env.NOON_PAYMENT_MODE || "Test";   // "Test" | "Live"
   const category = process.env.NOON_PAYMENT_ORDER_CATEGORY || "pay";
   const channel  = (process.env.NOON_PAYMENT_CHANNEL || "web").charAt(0).toUpperCase()
                  + (process.env.NOON_PAYMENT_CHANNEL || "web").slice(1); // "web" → "Web"
   const returnUrl = process.env.NOON_PAYMENT_RETURN_URL || "http://localhost:3000/payment/callback";
+  const apiBase   = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
+    .replace(/\/$/, "");
 
-  // Use the exact API endpoint the client configured (Saudi region: api-test.sa.noonpayments.com)
-  const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
-    .replace(/\/$/, ""); // strip trailing slash for consistent URL building
+  // ── Auth header construction ─────────────────────────────────────
+  // Noon supports two formats depending on what the client provides:
+  //
+  // Format A — TOKEN_IDENTIFIER is a pre-encoded Base64 credential
+  //   (Noon encodes businessId.appName:appKey into one Base64 string)
+  //   Header: Key_Test {TOKEN_IDENTIFIER}        ← no extra appKey appended
+  //
+  // Format B — raw parts provided separately
+  //   Header: Key_Test {BUSINESS_ID}.{APP_NAME}:{APP_KEY}
+  //
+  // The client's TOKEN_IDENTIFIER is Base64 → use Format A.
+  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER;
+  const appKey          = process.env.NOON_PAYMENT_APP_KEY;
 
-  if (!tokenIdentifier || tokenIdentifier === "." || !appKey) {
-    console.error("[payment/initiate] Missing Noon env vars — check NOON_PAYMENT_TOKEN_IDENTIFIER (or NOON_PAYMENT_BUSINESS_ID + NOON_PAYMENT_APP_NAME) and NOON_PAYMENT_APP_KEY");
-    return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
+  let authHeader: string;
+
+  if (tokenIdentifier) {
+    // Format A: TOKEN_IDENTIFIER already encodes everything — use as-is
+    authHeader = `Key_${mode} ${tokenIdentifier}`;
+  } else {
+    // Format B: build from separate parts
+    const businessId = process.env.NOON_PAYMENT_BUSINESS_ID;
+    const appName    = process.env.NOON_PAYMENT_APP_NAME;
+    if (!businessId || !appName || !appKey) {
+      console.error("[payment/initiate] Missing Noon env vars — set NOON_PAYMENT_TOKEN_IDENTIFIER or NOON_PAYMENT_BUSINESS_ID + NOON_PAYMENT_APP_NAME + NOON_PAYMENT_APP_KEY");
+      return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
+    }
+    authHeader = `Key_${mode} ${businessId}.${appName}:${appKey}`;
   }
-
-  // Auth header: Key_Test {tokenIdentifier}:{appKey}
-  const authHeader = `Key_${mode} ${tokenIdentifier}:${appKey}`;
 
   // ── 3. Build Noon order payload ──────────────────────────────────
   // channel and category both belong inside the `order` object per Noon's API spec
@@ -104,7 +117,7 @@ export async function POST(request: NextRequest) {
 
   // ── 4. Call Noon API ─────────────────────────────────────────────
   console.log("[payment/initiate] Calling Noon:", `${apiBase}/order`);
-  console.log("[payment/initiate] Auth prefix:", `Key_${mode} ${tokenIdentifier.split(".")[0]}…`);
+  console.log("[payment/initiate] Auth mode:", `Key_${mode}`, "| token set:", !!tokenIdentifier);
 
   let noonRes: Response;
   try {
