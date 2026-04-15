@@ -74,20 +74,20 @@ export async function POST(request: NextRequest) {
   const authHeader = `Key_${mode} ${tokenIdentifier}:${appKey}`;
 
   // ── 3. Build Noon order payload ──────────────────────────────────
+  // channel and category both belong inside the `order` object per Noon's API spec
   const noonPayload = {
     apiOperation: "INITIATE",
     order: {
-      reference:   orderRef,
-      amount:      Number(amount.toFixed(2)),
+      reference: orderRef,
+      amount:    Number(amount.toFixed(2)),
       currency,
-      name:        body.description || "Hotel Booking",
-      description: body.description || "HMS Hotel Booking",
-      category,                         // pre-configured in client's Noon account
+      name:      (body.description || "Hotel Booking").slice(0, 50), // Noon caps name at 50 chars
+      channel,     // ← must be in order, NOT configuration
+      category,    // ← must be in order, NOT configuration
     },
     configuration: {
-      paymentAction: "SALE",            // capture immediately (not just auth)
+      paymentAction: "SALE",   // charge immediately (not just auth)
       returnUrl,
-      channel,                          // "Web" — pre-configured in client's account
     },
     // Optional: pre-fill customer details on Noon's checkout page
     ...(customer?.email && {
@@ -98,6 +98,9 @@ export async function POST(request: NextRequest) {
       },
     }),
   };
+
+  // Log the full payload so you can inspect it during testing
+  console.log("[payment/initiate] Payload to Noon:", JSON.stringify(noonPayload, null, 2));
 
   // ── 4. Call Noon API ─────────────────────────────────────────────
   console.log("[payment/initiate] Calling Noon:", `${apiBase}/order`);
