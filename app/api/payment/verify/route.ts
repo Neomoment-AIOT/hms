@@ -35,20 +35,24 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 2. Noon config ───────────────────────────────────────────────
-  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER
-    || `${process.env.NOON_PAYMENT_BUSINESS_ID}.${process.env.NOON_PAYMENT_APP_NAME}`;
-
-  const appKey = process.env.NOON_PAYMENT_APP_KEY;
-  const mode   = process.env.NOON_PAYMENT_MODE || "Test";
-
+  const mode    = process.env.NOON_PAYMENT_MODE || "Test";
   const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
     .replace(/\/$/, "");
 
-  if (!tokenIdentifier || tokenIdentifier === "." || !appKey) {
-    return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
-  }
+  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER;
+  const appKey          = process.env.NOON_PAYMENT_APP_KEY;
 
-  const authHeader = `Key_${mode} ${tokenIdentifier}:${appKey}`;
+  let authHeader: string;
+  if (tokenIdentifier) {
+    authHeader = `Key_${mode} ${tokenIdentifier}`;
+  } else {
+    const businessId = process.env.NOON_PAYMENT_BUSINESS_ID;
+    const appName    = process.env.NOON_PAYMENT_APP_NAME;
+    if (!businessId || !appName || !appKey) {
+      return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
+    }
+    authHeader = `Key_${mode} ${businessId}.${appName}:${appKey}`;
+  }
 
   // ── 3. Fetch order from Noon ─────────────────────────────────────
   let noonRes: Response;
