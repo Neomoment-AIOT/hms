@@ -48,23 +48,30 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 2. Noon config — read from env, never from client ────────────
-  const businessId = process.env.NOON_BUSINESS_IDENTIFIER;
-  const appId      = process.env.NOON_APP_IDENTIFIER;
-  const appKey     = process.env.NOON_APP_KEY;
-  const noonEnv    = process.env.NOON_ENV || "test";           // "test" | "live"
-  const returnUrl  = process.env.NOON_RETURN_URL;
+  // TOKEN_IDENTIFIER = BUSINESS_ID.APP_NAME (Noon combines them as a single token)
+  // If client provided it pre-combined, use it directly.
+  // If not, we build it from BUSINESS_ID + APP_NAME.
+  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER
+    || `${process.env.NOON_PAYMENT_BUSINESS_ID}.${process.env.NOON_PAYMENT_APP_NAME}`;
 
-  if (!businessId || !appId || !appKey) {
-    console.error("[payment/initiate] Missing Noon env vars");
+  const appKey   = process.env.NOON_PAYMENT_APP_KEY;
+  const mode     = process.env.NOON_PAYMENT_MODE || "Test";          // "Test" | "Live"
+  const category = process.env.NOON_PAYMENT_ORDER_CATEGORY || "pay";
+  const channel  = (process.env.NOON_PAYMENT_CHANNEL || "web").charAt(0).toUpperCase()
+                 + (process.env.NOON_PAYMENT_CHANNEL || "web").slice(1); // "web" → "Web"
+  const returnUrl = process.env.NOON_PAYMENT_RETURN_URL || "http://localhost:3000/payment/callback";
+
+  // Use the exact API endpoint the client configured (Saudi region: api-test.sa.noonpayments.com)
+  const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
+    .replace(/\/$/, ""); // strip trailing slash for consistent URL building
+
+  if (!tokenIdentifier || tokenIdentifier === "." || !appKey) {
+    console.error("[payment/initiate] Missing Noon env vars — check NOON_PAYMENT_TOKEN_IDENTIFIER (or NOON_PAYMENT_BUSINESS_ID + NOON_PAYMENT_APP_NAME) and NOON_PAYMENT_APP_KEY");
     return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
   }
 
-  const isLive    = noonEnv === "live";
-  const apiBase   = isLive
-    ? "https://api.noonpayments.com/payment/v1"
-    : "https://api-test.noonpayments.com/payment/v1";
-  const keyPrefix = isLive ? "Key_Live" : "Key_Test";
-  const authHeader = `${keyPrefix} ${businessId}.${appId}:${appKey}`;
+  // Auth header: Key_Test {tokenIdentifier}:{appKey}
+  const authHeader = `Key_${mode} ${tokenIdentifier}:${appKey}`;
 
   // ── 3. Build Noon order payload ──────────────────────────────────
   const noonPayload = {
@@ -75,13 +82,14 @@ export async function POST(request: NextRequest) {
       currency,
       name:        body.description || "Hotel Booking",
       description: body.description || "HMS Hotel Booking",
-      channel:     "Web",
+      category,                         // pre-configured in client's Noon account
     },
     configuration: {
-      paymentAction: "SALE",           // charge immediately (not just auth)
-      returnUrl:     returnUrl || "http://localhost:3000/payment/callback",
+      paymentAction: "SALE",            // capture immediately (not just auth)
+      returnUrl,
+      channel,                          // "Web" — pre-configured in client's account
     },
-    // Optional: pre-fill customer name on Noon's checkout page
+    // Optional: pre-fill customer details on Noon's checkout page
     ...(customer?.email && {
       billing: {
         firstName: customer.firstName || "",
@@ -92,13 +100,16 @@ export async function POST(request: NextRequest) {
   };
 
   // ── 4. Call Noon API ─────────────────────────────────────────────
+  console.log("[payment/initiate] Calling Noon:", `${apiBase}/order`);
+  console.log("[payment/initiate] Auth prefix:", `Key_${mode} ${tokenIdentifier.split(".")[0]}…`);
+
   let noonRes: Response;
   try {
     noonRes = await fetch(`${apiBase}/order`, {
       method:  "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: authHeader,
+        Authorization:  authHeader,
       },
       body: JSON.stringify(noonPayload),
     });
@@ -124,8 +135,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "No checkout URL returned from Noon" }, { status: 502 });
   }
 
-  // ── 6. Return checkout URL to the browser ───────────────────────
-  // orderId is your reference to verify the payment after redirect
+  // ── 6. Return checkout URL to the browser ────────────────────────
   return NextResponse.json({
     ok: true,
     checkoutWebUrl,
