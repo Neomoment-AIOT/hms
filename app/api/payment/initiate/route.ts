@@ -48,12 +48,12 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 2. Noon config — read from env, never from client ────────────
-  const mode     = process.env.NOON_PAYMENT_MODE || "Test";   // "Test" | "Live"
+  const mode = process.env.NOON_PAYMENT_MODE || "Test";   // "Test" | "Live"
   const category = process.env.NOON_PAYMENT_ORDER_CATEGORY || "pay";
-  const channel  = (process.env.NOON_PAYMENT_CHANNEL || "web").charAt(0).toUpperCase()
-                 + (process.env.NOON_PAYMENT_CHANNEL || "web").slice(1); // "web" → "Web"
+  const channel = (process.env.NOON_PAYMENT_CHANNEL || "web").charAt(0).toUpperCase()
+    + (process.env.NOON_PAYMENT_CHANNEL || "web").slice(1); // "web" → "Web"
   const returnUrl = process.env.NOON_PAYMENT_RETURN_URL || "http://localhost:3000/payment/callback";
-  const apiBase   = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
+  const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
     .replace(/\/$/, "");
 
   // ── Auth header construction ─────────────────────────────────────
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   //
   // The client's TOKEN_IDENTIFIER is Base64 → use Format A.
   const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER;
-  const appKey          = process.env.NOON_PAYMENT_APP_KEY;
+  const appKey = process.env.NOON_PAYMENT_APP_KEY;
 
   let authHeader: string;
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
   } else {
     // Format B: build from separate parts
     const businessId = process.env.NOON_PAYMENT_BUSINESS_ID;
-    const appName    = process.env.NOON_PAYMENT_APP_NAME;
+    const appName = process.env.NOON_PAYMENT_APP_NAME;
     if (!businessId || !appName || !appKey) {
       console.error("[payment/initiate] Missing Noon env vars — set NOON_PAYMENT_TOKEN_IDENTIFIER or NOON_PAYMENT_BUSINESS_ID + NOON_PAYMENT_APP_NAME + NOON_PAYMENT_APP_KEY");
       return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
@@ -92,9 +92,10 @@ export async function POST(request: NextRequest) {
     apiOperation: "INITIATE",
     order: {
       reference: orderRef,
-      amount:    Number(amount.toFixed(2)),
+      amount: Number(amount.toFixed(2)),
       currency,
-      name:      (body.description || "Hotel Booking").slice(0, 50), // Noon caps name at 50 chars
+      // name:      (body.description || "Hotel Booking").slice(0, 50), // Noon caps name at 50 chars
+      name: "Hotel Booking",
       channel,     // ← must be in order, NOT configuration
       category,    // ← must be in order, NOT configuration
     },
@@ -106,8 +107,8 @@ export async function POST(request: NextRequest) {
     ...(customer?.email && {
       billing: {
         firstName: customer.firstName || "",
-        lastName:  customer.lastName  || "",
-        email:     customer.email,
+        lastName: customer.lastName || "",
+        email: customer.email,
       },
     }),
   };
@@ -122,10 +123,10 @@ export async function POST(request: NextRequest) {
   let noonRes: Response;
   try {
     noonRes = await fetch(`${apiBase}/order`, {
-      method:  "POST",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization:  authHeader,
+        Authorization: authHeader,
       },
       body: JSON.stringify(noonPayload),
     });
@@ -137,24 +138,28 @@ export async function POST(request: NextRequest) {
   const noonData = await noonRes.json();
 
   // ── 5. Check Noon response ───────────────────────────────────────
-  if (!noonRes.ok || noonData?.result?.code !== 0) {
-    console.error("[payment/initiate] Noon error:", JSON.stringify(noonData));
+  // Noon response check logic update:
+  if (!noonRes.ok || noonData.resultCode !== 0) {
+    console.error("[payment/initiate] Noon error response:", JSON.stringify(noonData));
     return NextResponse.json(
-      { ok: false, error: noonData?.result?.message || "Payment initiation failed" },
+      { ok: false, error: noonData?.message || "Payment initiation failed" },
       { status: 502 }
     );
   }
 
-  const { orderId, checkoutWebUrl } = noonData.resultData;
+  // Noon ke naye data structure se checkout URL nikalna:
+  const checkoutWebUrl = noonData.result?.checkoutData?.postUrl;
+  const orderId = noonData.result?.order?.id;
 
   if (!checkoutWebUrl) {
-    return NextResponse.json({ ok: false, error: "No checkout URL returned from Noon" }, { status: 502 });
+    console.error("[payment/initiate] Missing postUrl in Noon response");
+    return NextResponse.json({ ok: false, error: "No checkout URL returned" }, { status: 502 });
   }
 
-  // ── 6. Return checkout URL to the browser ────────────────────────
+  // ── 6. Return success to frontend ────────────────────────
   return NextResponse.json({
     ok: true,
-    checkoutWebUrl,
+    checkoutWebUrl: checkoutWebUrl,
     noonOrderId: orderId,
   });
 }

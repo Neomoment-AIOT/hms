@@ -35,19 +35,19 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 2. Noon config ───────────────────────────────────────────────
-  const mode    = process.env.NOON_PAYMENT_MODE || "Test";
+  const mode = process.env.NOON_PAYMENT_MODE || "Test";
   const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
     .replace(/\/$/, "");
 
   const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER;
-  const appKey          = process.env.NOON_PAYMENT_APP_KEY;
+  const appKey = process.env.NOON_PAYMENT_APP_KEY;
 
   let authHeader: string;
   if (tokenIdentifier) {
     authHeader = `Key_${mode} ${tokenIdentifier}`;
   } else {
     const businessId = process.env.NOON_PAYMENT_BUSINESS_ID;
-    const appName    = process.env.NOON_PAYMENT_APP_NAME;
+    const appName = process.env.NOON_PAYMENT_APP_NAME;
     if (!businessId || !appName || !appKey) {
       return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
     }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   let noonRes: Response;
   try {
     noonRes = await fetch(`${apiBase}/order/${noonOrderId}`, {
-      method:  "GET",
+      method: "GET",
       headers: { Authorization: authHeader },
     });
   } catch (err) {
@@ -68,22 +68,24 @@ export async function POST(request: NextRequest) {
 
   const noonData = await noonRes.json();
 
-  if (!noonRes.ok || noonData?.result?.code !== 0) {
+  // FIX: Noon top-level resultCode check karta hai
+  if (!noonRes.ok || noonData?.resultCode !== 0) {
     console.error("[payment/verify] Noon error:", JSON.stringify(noonData));
     return NextResponse.json(
-      { ok: false, error: noonData?.result?.message || "Could not retrieve order from Noon" },
+      { ok: false, error: noonData?.message || "Could not retrieve order from Noon" },
       { status: 502 }
     );
   }
 
   // ── 4. Inspect order status ──────────────────────────────────────
-  const order = noonData.resultData?.order;
+  // FIX: Data 'result' object ke andar hai, 'resultData' mein nahi
+  const order = noonData.result?.order;
   const status: NoonOrderStatus = order?.status;
   const isPaid = status === "CAPTURED";
 
-  const capturedAmount: number = order?.amount   ?? 0;
-  const currency: string       = order?.currency ?? "SAR";
-  const reference: string      = order?.reference ?? "";  // your HMS-xxx-timestamp
+  const capturedAmount: number = order?.totalCapturedAmount ?? order?.amount ?? 0;
+  const currency: string = order?.currency ?? "SAR";
+  const reference: string = order?.reference ?? "";
 
   return NextResponse.json({
     ok: true,
