@@ -3,19 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * POST /api/payment/initiate
  *
- * Creates a Noon payment order and returns the hosted checkout URL.
- * All Noon credentials stay server-side — never sent to the browser.
+ * Two-step MyFatoorah flow:
+ *  Step A — InitiatePayment  → discovers which PaymentMethodIds are available
+ *            for this token + amount + currency combination
+ *  Step B — ExecutePayment   → creates the invoice using the discovered method ID
  *
- * Body:
- *   amount        number   – total to charge (SAR)
- *   currency      string   – "SAR" (default)
- *   orderRef      string   – your internal booking reference
- *   description   string   – shown on Noon checkout page
- *   hotelId       number
- *   roomTypeId    number
- *   checkIn       string   – "YYYY-MM-DD"
- *   checkOut      string   – "YYYY-MM-DD"
- *   customer      { firstName, lastName, email }
+ * Returns:
+ *   { ok: true, checkoutWebUrl: string, invoiceId: number }
  */
 export async function POST(request: NextRequest) {
   // ── 1. Read + validate body ──────────────────────────────────────
@@ -29,6 +23,7 @@ export async function POST(request: NextRequest) {
     checkIn?: string;
     checkOut?: string;
     customer?: { firstName?: string; lastName?: string; email?: string };
+    paymentMethodId?: number;   // if provided, skip InitiatePayment discovery step
   };
 
   try {
@@ -38,128 +33,198 @@ export async function POST(request: NextRequest) {
   }
 
   const { amount, orderRef, customer } = body;
-  const currency = body.currency || "SAR";
 
   if (!amount || amount <= 0) {
-    return NextResponse.json({ ok: false, error: "amount is required and must be > 0" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "amount is required and must be > 0" },
+      { status: 400 }
+    );
   }
   if (!orderRef) {
     return NextResponse.json({ ok: false, error: "orderRef is required" }, { status: 400 });
   }
 
-  // ── 2. Noon config — read from env, never from client ────────────
-  const mode = process.env.NOON_PAYMENT_MODE || "Test";   // "Test" | "Live"
-  const category = process.env.NOON_PAYMENT_ORDER_CATEGORY || "pay";
-  const channel = (process.env.NOON_PAYMENT_CHANNEL || "web").charAt(0).toUpperCase()
-    + (process.env.NOON_PAYMENT_CHANNEL || "web").slice(1); // "web" → "Web"
-  const returnUrl = process.env.NOON_PAYMENT_RETURN_URL || "http://localhost:3000/payment/callback";
-  const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
-    .replace(/\/$/, "");
+  // ── 2. Config ────────────────────────────────────────────────────
+  const apiToken    = process.env.MYFATOORAH_API_TOKEN;
+  const baseUrl     = (process.env.MYFATOORAH_BASE_URL || "https://apitest.myfatoorah.com").replace(/\/$/, "");
+  const callBackUrl = process.env.MYFATOORAH_CALLBACK_URL || "http://localhost:3000/payment/callback";
+  const errorUrl    = process.env.MYFATOORAH_ERROR_URL    || "http://localhost:3000/payment/failed";
+  const webhookUrl  = process.env.MYFATOORAH_WEBHOOK_URL;
 
-  // ── Auth header construction ─────────────────────────────────────
-  // Noon supports two formats depending on what the client provides:
-  //
-  // Format A — TOKEN_IDENTIFIER is a pre-encoded Base64 credential
-  //   (Noon encodes businessId.appName:appKey into one Base64 string)
-  //   Header: Key_Test {TOKEN_IDENTIFIER}        ← no extra appKey appended
-  //
-  // Format B — raw parts provided separately
-  //   Header: Key_Test {BUSINESS_ID}.{APP_NAME}:{APP_KEY}
-  //
-  // The client's TOKEN_IDENTIFIER is Base64 → use Format A.
-  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER;
-  const appKey = process.env.NOON_PAYMENT_APP_KEY;
-
-  let authHeader: string;
-
-  if (tokenIdentifier) {
-    // Format A: TOKEN_IDENTIFIER already encodes everything — use as-is
-    authHeader = `Key_${mode} ${tokenIdentifier}`;
-  } else {
-    // Format B: build from separate parts
-    const businessId = process.env.NOON_PAYMENT_BUSINESS_ID;
-    const appName = process.env.NOON_PAYMENT_APP_NAME;
-    if (!businessId || !appName || !appKey) {
-      console.error("[payment/initiate] Missing Noon env vars — set NOON_PAYMENT_TOKEN_IDENTIFIER or NOON_PAYMENT_BUSINESS_ID + NOON_PAYMENT_APP_NAME + NOON_PAYMENT_APP_KEY");
-      return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
-    }
-    authHeader = `Key_${mode} ${businessId}.${appName}:${appKey}`;
+  if (!apiToken) {
+    console.error("[payment/initiate] Missing MYFATOORAH_API_TOKEN env var");
+    return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
   }
 
-  // ── 3. Build Noon order payload ──────────────────────────────────
-  // channel and category both belong inside the `order` object per Noon's API spec
-  const noonPayload = {
-    apiOperation: "INITIATE",
-    order: {
-      reference: orderRef,
-      amount: Number(amount.toFixed(2)),
-      currency,
-      // name:      (body.description || "Hotel Booking").slice(0, 50), // Noon caps name at 50 chars
-      name: "Hotel Booking",
-      channel,     // ← must be in order, NOT configuration
-      category,    // ← must be in order, NOT configuration
-    },
-    configuration: {
-      paymentAction: "SALE",   // charge immediately (not just auth)
-      returnUrl,
-    },
-    // Optional: pre-fill customer details on Noon's checkout page
-    ...(customer?.email && {
-      billing: {
-        firstName: customer.firstName || "",
-        lastName: customer.lastName || "",
-        email: customer.email,
-      },
-    }),
-  };
+  const authHeader = { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` };
 
-  // Log the full payload so you can inspect it during testing
-  console.log("[payment/initiate] Payload to Noon:", JSON.stringify(noonPayload, null, 2));
+  // ── STEP A: Resolve PaymentMethodId ─────────────────────────────
+  // If the frontend already sent a methodId (user picked from our modal), use it directly.
+  // Otherwise auto-discover via InitiatePayment (fallback, e.g. direct API calls).
+  if (body.paymentMethodId) {
+    console.log("[payment/initiate] Using caller-supplied PaymentMethodId:", body.paymentMethodId);
+  }
 
-  // ── 4. Call Noon API ─────────────────────────────────────────────
-  console.log("[payment/initiate] Calling Noon:", `${apiBase}/order`);
-  console.log("[payment/initiate] Auth mode:", `Key_${mode}`, "| token set:", !!tokenIdentifier);
+  console.log("[payment/initiate] Step A — calling InitiatePayment to discover method IDs...");
 
-  let noonRes: Response;
-  try {
-    noonRes = await fetch(`${apiBase}/order`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-      },
-      body: JSON.stringify(noonPayload),
+  let methodId: number | null = body.paymentMethodId ?? null;
+
+  if (!methodId) try {
+    const initRes = await fetch(`${baseUrl}/v2/InitiatePayment`, {
+      method:  "POST",
+      headers: authHeader,
+      body:    JSON.stringify({
+        InvoiceAmount: Number(amount.toFixed(2)),
+        CurrencyIso:   "SAR",
+      }),
     });
+
+    const initData = await initRes.json();
+    console.log("[payment/initiate] InitiatePayment response:", JSON.stringify(initData, null, 2));
+
+    if (initData.IsSuccess && Array.isArray(initData.Data?.PaymentMethods)) {
+      const methods: Array<{ PaymentMethodId: number; PaymentMethodEn: string; IsDirectPayment: boolean }> =
+        initData.Data.PaymentMethods;
+
+      console.log(
+        "[payment/initiate] Available payment methods:",
+        methods.map((m) => `${m.PaymentMethodId} = ${m.PaymentMethodEn}`).join(", ")
+      );
+
+      // Prefer a non-direct (hosted page) method in this order:
+      // Visa/Master → KNET → Mada → STC Pay → first available
+      const preferred = ["VISA/MASTER", "VISA", "MASTER", "KNET", "MADA", "STC PAY"];
+      let picked = methods.find(
+        (m) => !m.IsDirectPayment && preferred.some((p) => m.PaymentMethodEn.toUpperCase().includes(p))
+      );
+      if (!picked) {
+        // Fallback: just take the first non-direct method
+        picked = methods.find((m) => !m.IsDirectPayment) ?? methods[0];
+      }
+
+      if (picked) {
+        methodId = picked.PaymentMethodId;
+        console.log(`[payment/initiate] Selected method: ${methodId} = ${picked.PaymentMethodEn}`);
+      }
+    }
   } catch (err) {
-    console.error("[payment/initiate] Network error calling Noon:", err);
-    return NextResponse.json({ ok: false, error: "Payment gateway unreachable" }, { status: 502 });
+    console.warn("[payment/initiate] InitiatePayment failed — will try SAR currency fallback:", err);
   }
 
-  const noonData = await noonRes.json();
+  // If SAR returned no methods (demo is KWD-based), retry with KWD
+  if (methodId === null) {
+    console.log("[payment/initiate] No SAR methods found — retrying InitiatePayment with KWD...");
+    try {
+      const initRes = await fetch(`${baseUrl}/v2/InitiatePayment`, {
+        method:  "POST",
+        headers: authHeader,
+        body:    JSON.stringify({
+          InvoiceAmount: Number(amount.toFixed(2)),
+          CurrencyIso:   "KWD",
+        }),
+      });
 
-  // ── 5. Check Noon response ───────────────────────────────────────
-  // Noon response check logic update:
-  if (!noonRes.ok || noonData.resultCode !== 0) {
-    console.error("[payment/initiate] Noon error response:", JSON.stringify(noonData));
+      const initData = await initRes.json();
+      console.log("[payment/initiate] InitiatePayment (KWD) response:", JSON.stringify(initData, null, 2));
+
+      if (initData.IsSuccess && Array.isArray(initData.Data?.PaymentMethods)) {
+        const methods: Array<{ PaymentMethodId: number; PaymentMethodEn: string; IsDirectPayment: boolean }> =
+          initData.Data.PaymentMethods;
+
+        console.log(
+          "[payment/initiate] Available KWD payment methods:",
+          methods.map((m) => `${m.PaymentMethodId} = ${m.PaymentMethodEn}`).join(", ")
+        );
+
+        const preferred = ["VISA/MASTER", "VISA", "MASTER", "KNET", "MADA", "STC PAY"];
+        let picked = methods.find(
+          (m) => !m.IsDirectPayment && preferred.some((p) => m.PaymentMethodEn.toUpperCase().includes(p))
+        );
+        if (!picked) {
+          picked = methods.find((m) => !m.IsDirectPayment) ?? methods[0];
+        }
+
+        if (picked) {
+          methodId = picked.PaymentMethodId;
+          console.log(`[payment/initiate] Selected KWD method: ${methodId} = ${picked.PaymentMethodEn}`);
+        }
+      }
+    } catch (err) {
+      console.error("[payment/initiate] InitiatePayment KWD also failed:", err);
+    }
+  }
+
+  if (methodId === null) {
+    console.error("[payment/initiate] Could not discover any valid PaymentMethodId from InitiatePayment");
     return NextResponse.json(
-      { ok: false, error: noonData?.message || "Payment initiation failed" },
+      { ok: false, error: "No payment methods available from gateway" },
       { status: 502 }
     );
   }
 
-  // Noon ke naye data structure se checkout URL nikalna:
-  const checkoutWebUrl = noonData.result?.checkoutData?.postUrl;
-  const orderId = noonData.result?.order?.id;
+  // ── STEP B: ExecutePayment — create the invoice ──────────────────
+  const customerName = [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || "Guest";
 
-  if (!checkoutWebUrl) {
-    console.error("[payment/initiate] Missing postUrl in Noon response");
+  const mfPayload: Record<string, unknown> = {
+    PaymentMethodId:    methodId,
+    InvoiceValue:       Number(amount.toFixed(2)),
+    CallBackUrl:        callBackUrl,
+    ErrorUrl:           errorUrl,
+    Language:           "EN",
+    CustomerName:       customerName,
+    CustomerReference:  orderRef,
+    DisplayCurrencyIso: "SAR",
+    InvoiceItems: [
+      {
+        ItemName:  body.description || "Hotel Booking",
+        Quantity:  1,
+        UnitPrice: Number(amount.toFixed(2)),
+      },
+    ],
+  };
+
+  if (customer?.email) mfPayload.CustomerEmail = customer.email;
+  if (webhookUrl)       mfPayload.WebhookUrl   = webhookUrl;
+
+  console.log("[payment/initiate] Step B — ExecutePayment payload:", JSON.stringify(mfPayload, null, 2));
+
+  let mfRes: Response;
+  try {
+    mfRes = await fetch(`${baseUrl}/v2/ExecutePayment`, {
+      method:  "POST",
+      headers: authHeader,
+      body:    JSON.stringify(mfPayload),
+    });
+  } catch (err) {
+    console.error("[payment/initiate] Network error calling ExecutePayment:", err);
+    return NextResponse.json({ ok: false, error: "Payment gateway unreachable" }, { status: 502 });
+  }
+
+  const mfData = await mfRes.json();
+  console.log("[payment/initiate] ExecutePayment response:", JSON.stringify(mfData, null, 2));
+
+  if (!mfRes.ok || !mfData.IsSuccess) {
+    console.error("[payment/initiate] ExecutePayment error:", JSON.stringify(mfData));
+    return NextResponse.json(
+      {
+        ok:    false,
+        error: mfData?.ValidationErrors?.[0]?.Error || mfData?.Message || "Payment initiation failed",
+      },
+      { status: 502 }
+    );
+  }
+
+  const paymentUrl = mfData.Data?.PaymentURL;
+  const invoiceId  = mfData.Data?.InvoiceId;
+
+  if (!paymentUrl) {
+    console.error("[payment/initiate] Missing PaymentURL in ExecutePayment response");
     return NextResponse.json({ ok: false, error: "No checkout URL returned" }, { status: 502 });
   }
 
-  // ── 6. Return success to frontend ────────────────────────
   return NextResponse.json({
-    ok: true,
-    checkoutWebUrl: checkoutWebUrl,
-    noonOrderId: orderId,
+    ok:             true,
+    checkoutWebUrl: paymentUrl,
+    invoiceId,
   });
 }

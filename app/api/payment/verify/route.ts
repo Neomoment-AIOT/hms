@@ -3,95 +3,97 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * POST /api/payment/verify
  *
- * Re-fetches the Noon order from Noon's servers and confirms payment status.
- * NEVER trust the status from the browser redirect — always verify server-side.
+ * Calls MyFatoorah GetPaymentStatus to confirm the payment server-side.
+ * NEVER trust the status from the browser redirect — always verify here.
  *
  * Body:
- *   noonOrderId   number | string   – the orderId Noon gave us at initiate
+ *   paymentId   string   – the paymentId MyFatoorah appends to the callback URL
+ *
+ * Returns:
+ *   { ok: true, isPaid: boolean, status: string, invoiceId: number,
+ *     capturedAmount: number, currency: string, reference: string }
  */
-
-type NoonOrderStatus =
-  | "INITIATED"
-  | "AUTHORIZED"
-  | "CAPTURED"    // ← money collected — booking is paid
-  | "REVERSED"
-  | "REFUNDED"
-  | "FAILED"
-  | "EXPIRED"
-  | "CANCELLED";
-
 export async function POST(request: NextRequest) {
   // ── 1. Read body ─────────────────────────────────────────────────
-  let body: { noonOrderId?: string | number };
+  let body: { paymentId?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { noonOrderId } = body;
-  if (!noonOrderId) {
-    return NextResponse.json({ ok: false, error: "noonOrderId is required" }, { status: 400 });
+  const { paymentId } = body;
+  if (!paymentId) {
+    return NextResponse.json({ ok: false, error: "paymentId is required" }, { status: 400 });
   }
 
-  // ── 2. Noon config ───────────────────────────────────────────────
-  const mode = process.env.NOON_PAYMENT_MODE || "Test";
-  const apiBase = (process.env.NOON_PAYMENT_API || "https://api-test.sa.noonpayments.com/payment/v1/")
-    .replace(/\/$/, "");
+  // ── 2. MyFatoorah config ─────────────────────────────────────────
+  const apiToken = process.env.MYFATOORAH_API_TOKEN;
+  const baseUrl  = (process.env.MYFATOORAH_BASE_URL || "https://apitest.myfatoorah.com").replace(/\/$/, "");
 
-  const tokenIdentifier = process.env.NOON_PAYMENT_TOKEN_IDENTIFIER;
-  const appKey = process.env.NOON_PAYMENT_APP_KEY;
-
-  let authHeader: string;
-  if (tokenIdentifier) {
-    authHeader = `Key_${mode} ${tokenIdentifier}`;
-  } else {
-    const businessId = process.env.NOON_PAYMENT_BUSINESS_ID;
-    const appName = process.env.NOON_PAYMENT_APP_NAME;
-    if (!businessId || !appName || !appKey) {
-      return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
-    }
-    authHeader = `Key_${mode} ${businessId}.${appName}:${appKey}`;
+  if (!apiToken) {
+    return NextResponse.json({ ok: false, error: "Payment gateway not configured" }, { status: 503 });
   }
 
-  // ── 3. Fetch order from Noon ─────────────────────────────────────
-  let noonRes: Response;
+  // ── 3. Call MyFatoorah GetPaymentStatus ──────────────────────────
+  // KeyType "PaymentId" is the most precise — it's the transaction-level ID
+  // appended by MyFatoorah to both CallBackUrl and ErrorUrl as ?paymentId=xxx
+  const endpoint = `${baseUrl}/v2/GetPaymentStatus`;
+  console.log("[payment/verify] Calling MyFatoorah GetPaymentStatus for paymentId:", paymentId);
+
+  let mfRes: Response;
   try {
-    noonRes = await fetch(`${apiBase}/order/${noonOrderId}`, {
-      method: "GET",
-      headers: { Authorization: authHeader },
+    mfRes = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${apiToken}`,
+      },
+      body: JSON.stringify({ Key: paymentId, KeyType: "PaymentId" }),
     });
   } catch (err) {
-    console.error("[payment/verify] Network error calling Noon:", err);
+    console.error("[payment/verify] Network error calling MyFatoorah:", err);
     return NextResponse.json({ ok: false, error: "Payment gateway unreachable" }, { status: 502 });
   }
 
-  const noonData = await noonRes.json();
+  const mfData = await mfRes.json();
+  console.log("[payment/verify] MyFatoorah response:", JSON.stringify(mfData, null, 2));
 
-  // FIX: Noon top-level resultCode check karta hai
-  if (!noonRes.ok || noonData?.resultCode !== 0) {
-    console.error("[payment/verify] Noon error:", JSON.stringify(noonData));
+  if (!mfRes.ok || !mfData.IsSuccess) {
+    console.error("[payment/verify] MyFatoorah error:", JSON.stringify(mfData));
     return NextResponse.json(
-      { ok: false, error: noonData?.message || "Could not retrieve order from Noon" },
+      { ok: false, error: mfData?.Message || "Could not retrieve payment status" },
       { status: 502 }
     );
   }
 
-  // ── 4. Inspect order status ──────────────────────────────────────
-  // FIX: Data 'result' object ke andar hai, 'resultData' mein nahi
-  const order = noonData.result?.order;
-  const status: NoonOrderStatus = order?.status;
-  const isPaid = status === "CAPTURED";
+  // ── 4. Inspect payment status ────────────────────────────────────
+  // InvoiceStatus values: "Pending" | "Paid" | "Canceled"
+  const data           = mfData.Data || {};
+  const status: string = data.InvoiceStatus ?? "Pending";
+  const isPaid         = status === "Paid";
+  const invoiceId      = data.InvoiceId ?? null;
+  const reference      = data.CustomerReference ?? "";  // your HMS-xxx-timestamp ref
 
-  const capturedAmount: number = order?.totalCapturedAmount ?? order?.amount ?? 0;
-  const currency: string = order?.currency ?? "SAR";
-  const reference: string = order?.reference ?? "";
+  // ── Amount: use the DISPLAY amount (SAR), not InvoiceValue (stored in base currency KWD)
+  // Priority: transaction PaidCurrencyValue → parsed InvoiceDisplayValue → InvoiceValue
+  const transaction    = Array.isArray(data.InvoiceTransactions) ? data.InvoiceTransactions[0] : null;
+  const capturedAmount: number =
+    (transaction?.PaidCurrencyValue != null ? parseFloat(transaction.PaidCurrencyValue) : null) ??
+    (data.InvoiceDisplayValue
+      ? parseFloat((data.InvoiceDisplayValue as string).replace(/[^0-9.]/g, ""))
+      : null) ??
+    data.InvoiceValue ??
+    0;
+
+  const currency = transaction?.PaidCurrency || data.CurrencyIso || "SAR";
 
   return NextResponse.json({
     ok: true,
     isPaid,
     status,
-    noonOrderId,
+    invoiceId,
+    paymentId,
     capturedAmount,
     currency,
     reference,

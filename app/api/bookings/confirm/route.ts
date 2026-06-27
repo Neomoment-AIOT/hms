@@ -41,17 +41,20 @@ export const POST = withAuth(async (request: NextRequest, auth) => {
     const result = await odooPost(
       "/api/confirm_room_availability",
       {
-        check_in_date: body.check_in_date,
-        check_out_date: body.check_out_date,
-        hotel_id: body.hotel_id,
+        check_in_date:    body.check_in_date,
+        check_out_date:   body.check_out_date,
+        hotel_id:         body.hotel_id,
         customer_details: body.customer_details,
-        rooms: body.rooms,
-        services: body.services || [],
+        rooms:            body.rooms,
+        services:         body.services || [],
         reference_number: body.reference_number,
-        payment_details: body.payment_details,
+        payment_details:  body.payment_details,
         reference_booking: body.reference_booking,
         additional_notes: body.additional_notes,
-        special_request: body.special_request,
+        special_request:  body.special_request,
+        // Optional: frontend can pass a specific meal_pattern_id.
+        // If omitted, the Odoo controller auto-derives it from rate_code → rate.detail → company default.
+        ...(body.meal_pattern_id ? { meal_pattern_id: body.meal_pattern_id } : {}),
       },
       auth.sessionToken
     );

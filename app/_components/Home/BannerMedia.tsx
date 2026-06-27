@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── Types ──────────────────────────────────────────────────
 export type BannerMediaType = "image" | "video" | "animation" | "carousel";
@@ -72,9 +72,8 @@ function BannerImage({
       <img
         src={src}
         alt="Banner"
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"
+          }`}
         fetchPriority="high"
         decoding="sync"
       />
@@ -110,9 +109,8 @@ function BannerVideo({
         playsInline
         preload="auto"
         onCanPlayThrough={handleCanPlay}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-          ready ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${ready ? "opacity-100" : "opacity-0"
+          }`}
       />
     </>
   );
@@ -151,9 +149,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#052E39}
         ref={iframeRef}
         srcDoc={wrappedHtml}
         title="Banner Animation"
-        className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-500 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"
+          }`}
         sandbox="allow-scripts allow-same-origin"
         loading="eager"
       />
@@ -176,22 +173,36 @@ function BannerCarousel({
   const [readyItems, setReadyItems] = useState<Set<number>>(new Set());
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
 
-  // Preload all carousel items before showing anything
-  const markItemReady = useCallback(
-    (index: number) => {
-      setReadyItems((prev) => {
-        const next = new Set(prev);
-        next.add(index);
-        // If first item is ready, we can show the carousel
-        if (next.has(0) && !preloaded) {
-          setPreloaded(true);
-          onReady();
-        }
-        return next;
-      });
-    },
-    [onReady, preloaded]
+  const itemsKey = useMemo(
+    () => items.map((i) => `${i.type}:${i.url}`).join("|"),
+    [items]
   );
+
+  // Reset preload state when carousel content changes
+  useEffect(() => {
+    setActiveIndex(0);
+    setPreloaded(false);
+    setReadyItems(new Set());
+  }, [itemsKey]);
+
+  // Mark an individual item as ready (pure state update only)
+  const markItemReady = useCallback((index: number) => {
+    setReadyItems((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  }, []);
+
+  // When the first slide is ready, reveal the carousel and signal readiness.
+  // (Side-effects must not run inside setState updaters.)
+  useEffect(() => {
+    if (preloaded) return;
+    if (!readyItems.has(0)) return;
+    setPreloaded(true);
+    onReady();
+  }, [preloaded, readyItems, onReady]);
 
   // Auto-advance slides
   useEffect(() => {
@@ -216,9 +227,8 @@ function BannerCarousel({
       {items.map((item, i) => (
         <div
           key={i}
-          className={`absolute inset-0 w-full h-full transition-opacity duration-700 ${
-            preloaded && i === activeIndex ? "opacity-100 z-[1]" : "opacity-0 z-0"
-          }`}
+          className={`absolute inset-0 w-full h-full transition-opacity duration-700 ${preloaded && i === activeIndex ? "opacity-100 z-[1]" : "opacity-0 z-0"
+            }`}
         >
           {item.type === "image" ? (
             <CarouselImage src={item.url} onReady={() => markItemReady(i)} />
@@ -242,11 +252,10 @@ function BannerCarousel({
                   setActiveIndex((prev) => (prev + 1) % items.length);
                 }, interval);
               }}
-              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                i === activeIndex
+              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === activeIndex
                   ? "bg-white scale-110"
                   : "bg-white/50 hover:bg-white/70"
-              }`}
+                }`}
               aria-label={`Slide ${i + 1}`}
             />
           ))}

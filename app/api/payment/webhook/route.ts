@@ -1,89 +1,165 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "crypto";
+import { getBookingSession } from "@/app/lib/payment/booking-store";
+import { odooFetch } from "@/app/lib/odoo/client";
 
 /**
  * POST /api/payment/webhook
  *
- * Noon calls this URL server-to-server whenever an order status changes.
- * This is independent of the browser returnUrl — it fires even if the user
- * closes their browser mid-redirect.
+ * MyFatoorah calls this server-to-server when invoice status changes.
+ * Passed per-request via WebhookUrl in ExecutePayment.
  *
- * Register this URL in Noon Dashboard → Integration → Webhooks:
- *   Test:  http://<your-ngrok>.ngrok.io/api/payment/webhook
- *   Live:  https://yourdomain.com/api/payment/webhook
+ * On TransactionStatus SUCCESS:
+ *   1. Looks up the booking session saved before payment redirect
+ *   2. Builds the confirm_room_availability payload
+ *   3. Calls Odoo to create + confirm the booking
+ *   4. Cleans up the session entry
  *
- * Noon expects a 200 response within 10 seconds — if it doesn't get one it
- * will retry up to 5 times with exponential back-off.
- *
- * TODO (when ready to implement):
- *   - On status CAPTURED  → create/confirm booking in Odoo
- *   - On status FAILED    → release any held inventory
- *   - On status REFUNDED  → cancel booking, notify guest
+ * Always returns 200 immediately — MyFatoorah retries on non-200.
  */
 
 export async function POST(request: NextRequest) {
-  // ── 1. Read raw body (needed for signature verification) ─────────
+  // ── 1. Parse body ─────────────────────────────────────────────────
   const rawBody = await request.text();
-
-  // ── 2. Verify Noon signature ─────────────────────────────────────
-  // Noon sends: Authorization: Key_Test {tokenIdentifier}:{hmac-signature}
-  // Signature = HMAC-SHA256(rawBody, appKey)
-  const authHeader = request.headers.get("Authorization") || "";
-  const appKey     = process.env.NOON_PAYMENT_APP_KEY || "";
-
-  let signatureValid = false;
-
-  if (appKey && authHeader) {
-    try {
-      // Extract the part after the last ":"
-      const signaturePart = authHeader.split(":").pop() || "";
-      const expected = createHmac("sha256", appKey)
-        .update(rawBody)
-        .digest("hex");
-      signatureValid = expected === signaturePart;
-    } catch {
-      signatureValid = false;
-    }
-  }
-
-  // ── 3. Parse payload ─────────────────────────────────────────────
   let payload: Record<string, unknown> = {};
   try {
     payload = JSON.parse(rawBody);
   } catch {
-    console.error("[webhook/noon] Failed to parse body:", rawBody);
-    // Still return 200 so Noon doesn't keep retrying a malformed request
+    console.error("[webhook] Failed to parse body:", rawBody);
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
-  // ── 4. LOG EVERYTHING (temporary — replace with business logic) ──
+  // ── 2. Extract MyFatoorah fields ─────────────────────────────────
+  const data              = (payload.Data as Record<string, unknown>) || {};
+  const invoiceId         = data.InvoiceId;
+  const transactionStatus = (data.TransactionStatus as string || "").toUpperCase();
+  const customerRef       = data.CustomerReference as string || "";
+  const paymentId         = data.PaymentId         as string || "";
+  const paymentMethod     = data.PaymentMethod      as string || "";
+  const paidAmount        = data.InvoiceValueInDisplayCurreny as string || "0";
+  const displayCurrency   = data.DisplayCurrency   as string || "SAR";
+
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("[webhook/noon] Received at:", new Date().toISOString());
-  console.log("[webhook/noon] Authorization header:", authHeader);
-  console.log("[webhook/noon] Signature valid:", signatureValid);
-  console.log("[webhook/noon] Full payload:");
-  console.log(JSON.stringify(payload, null, 2));
+  console.log("[webhook] Received at:         ", new Date().toISOString());
+  console.log("[webhook] InvoiceId:           ", invoiceId);
+  console.log("[webhook] TransactionStatus:   ", transactionStatus);
+  console.log("[webhook] CustomerReference:   ", customerRef);
+  console.log("[webhook] PaymentId:           ", paymentId);
+  console.log("[webhook] PaymentMethod:       ", paymentMethod);
+  console.log("[webhook] PaidAmount:          ", paidAmount, displayCurrency);
+
+  // ── 3. Only proceed on SUCCESS ────────────────────────────────────
+  if (transactionStatus !== "SUCCESS") {
+    console.log("[webhook] Skipping — status:", transactionStatus);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    return NextResponse.json({ received: true }, { status: 200 });
+  }
+
+  // ── 4. Look up booking session ────────────────────────────────────
+  const session = getBookingSession(customerRef);
+
+  if (!session) {
+    console.warn("[webhook] ⚠ No booking session for ref:", customerRef, "— session expired or missing");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    return NextResponse.json({ received: true }, { status: 200 });
+  }
+
+  // ── 5. Build confirm_room_availability payload ────────────────────
+  const confirmPayload = {
+    check_in_date:  session.checkIn,
+    check_out_date: session.checkOut,
+    hotel_id:       session.hotelId,
+    room_count:     session.roomCount,
+
+    customer_details: {
+      first_name: session.guestFirstName,
+      last_name:  session.guestLastName,
+      email:      session.guestEmail,
+      mobile:     session.guestMobile || session.guestEmail,
+      contact:    session.guestMobile || session.guestEmail,
+    },
+
+    rooms: [
+      {
+        room_type_id:   session.roomTypeId,
+        pax:            session.pax,
+        adults:         session.adults,
+        children:       session.children,
+        // nationality goes here — Odoo reads adult_details[0].nationality
+        // to set it on the partner before calling action_confirm()
+        adult_details: session.adults > 0 ? [
+          {
+            firstName:   session.guestFirstName,
+            lastName:    session.guestLastName,
+            nationality: session.guestCountry || "",
+            idType:      "",
+            id:          "",
+            relation:    "",   // Selection field: son/daughter/wife/etc — leave blank for primary guest
+            phone:       session.guestMobile || "",
+          },
+        ] : [],
+      },
+    ],
+
+    // services: session.meals.map((m) => ({
+    //   type:   1,
+    //   title:  m.description,
+    //   option: "",
+    // })),
+    services: [],
+
+    meal_pattern_id: session.mealPatternId,
+
+    reference_number: session.orderRef,
+
+    payment_details: {
+      success:        true,
+      is_paid:        true,
+      status:         "captured",
+      payment_method: paymentMethod,
+      invoice_id:     invoiceId,
+      payment_id:     paymentId,
+      paid_amount:    parseFloat(paidAmount),
+      currency:       displayCurrency,
+    },
+  };
+
+  console.log("[webhook] ✅ Calling Odoo confirm_room_availability...");
+  console.log("[webhook] Payload:", JSON.stringify(confirmPayload, null, 2));
+
+  // ── 6. Call Odoo — auth='public' so no session token needed ──────
+  // Use 90s timeout: action_confirm() in Odoo does heavy work (split rooms,
+  // folio lines, payment posting) and takes 20–40s — well above the 15s default.
+  try {
+    const result = await odooFetch(
+      "/api/confirm_room_availability",
+      {
+        method: "POST",
+        body: confirmPayload as unknown as Record<string, unknown>,
+        timeout: 90_000,
+      }
+    );
+
+    if (!result.success) {
+      console.error("[webhook] ❌ Odoo call failed:", result.error);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    const odooData = result.data as Record<string, unknown>;
+    console.log("[webhook] Odoo raw response:", JSON.stringify(odooData, null, 2));
+
+    if (odooData?.status === "success") {
+      console.log("[webhook] ✅ Booking created in Odoo! booking_id:", odooData.booking_id);
+      // Keep session alive so /api/booking/status can read session.amount
+      // (Odoo's amount_total stays 0 until record is opened). TTL (2h) will expire it.
+    } else {
+      console.error("[webhook] ❌ Odoo returned error:", odooData?.message);
+    }
+
+  } catch (err) {
+    console.error("[webhook] ❌ Exception calling Odoo:", err);
+  }
+
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-  // Useful fields to log individually for quick scanning
-  const order  = (payload.order  as Record<string, unknown>) || {};
-  const result = (payload.result as Record<string, unknown>) || {};
-
-  console.log("[webhook/noon] orderId:    ", order.id);
-  console.log("[webhook/noon] reference:  ", order.reference);  // your HMS-xxx-timestamp
-  console.log("[webhook/noon] status:     ", order.status);     // CAPTURED / FAILED etc.
-  console.log("[webhook/noon] amount:     ", order.amount, order.currency);
-  console.log("[webhook/noon] resultCode: ", result.code);
-  console.log("[webhook/noon] resultMsg:  ", result.message);
-
-  // ── 5. TODO: Business logic goes here ────────────────────────────
-  // const status = order.status as string;
-  // if (status === "CAPTURED") {
-  //   await confirmBookingInOdoo(order.reference as string, order.id as number);
-  // } else if (status === "REFUNDED" || status === "REVERSED") {
-  //   await cancelBookingInOdoo(order.reference as string);
-  // }
-
-  // ── 6. Always return 200 immediately ─────────────────────────────
   return NextResponse.json({ received: true }, { status: 200 });
 }

@@ -5,10 +5,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { LangContext } from "@/app/lang-provider";
 
 const STATUS_MESSAGES: Record<string, { en: string; ar: string }> = {
-  FAILED:    { en: "Your payment was declined.",       ar: "تم رفض عملية الدفع." },
-  CANCELLED: { en: "You cancelled the payment.",       ar: "تم إلغاء عملية الدفع." },
-  EXPIRED:   { en: "The payment session has expired.", ar: "انتهت صلاحية جلسة الدفع." },
-  REVERSED:  { en: "The payment was reversed.",        ar: "تم عكس عملية الدفع." },
+  // MyFatoorah statuses
+  Canceled: { en: "Your payment was cancelled.",       ar: "تم إلغاء عملية الدفع." },
+  Pending:  { en: "Your payment is still pending.",    ar: "الدفع لا يزال قيد الانتظار." },
+  // Fallback
+  Failed:   { en: "Your payment was declined.",        ar: "تم رفض عملية الدفع." },
 };
 
 function FailedContent() {
@@ -17,9 +18,9 @@ function FailedContent() {
   const { lang }     = useContext(LangContext);
   const isArabic     = lang === "ar";
 
-  const status  = searchParams.get("status") || "FAILED";
-  const orderId = searchParams.get("orderId");
-  const msg     = STATUS_MESSAGES[status] ?? STATUS_MESSAGES.FAILED;
+  const status    = searchParams.get("status") || "Failed";
+  const invoiceId = searchParams.get("invoiceId");
+  const msg       = STATUS_MESSAGES[status] ?? STATUS_MESSAGES.Failed;
 
   return (
     <div
@@ -41,9 +42,9 @@ function FailedContent() {
         {isArabic ? msg.ar : msg.en}
       </p>
 
-      {orderId && (
+      {invoiceId && (
         <p className="text-xs text-gray-400">
-          {isArabic ? `رقم الطلب: ${orderId}` : `Order ID: ${orderId}`}
+          {isArabic ? `رقم الفاتورة: ${invoiceId}` : `Invoice ID: ${invoiceId}`}
         </p>
       )}
 

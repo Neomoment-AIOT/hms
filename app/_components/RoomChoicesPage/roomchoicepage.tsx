@@ -42,15 +42,16 @@ export default function RoomChoicesPage() {
   const [openRoom, setOpenRoom] = useState<number | null>(null);
   const [roomCounts, setRoomCounts] = useState<{ [key: number]: number }>({});
 
-  // Initialize room counts when rooms change
+  // Initialize room counts when rooms change — seed from URL ?room= param
+  const minRoomCount = Math.max(1, Number(roomParam));
   useEffect(() => {
     setRoomCounts(
       rooms.reduce((acc, room) => {
-        acc[room.id] = 1;
+        acc[room.id] = minRoomCount;
         return acc;
       }, {} as { [key: number]: number })
     );
-  }, [rooms]);
+  }, [rooms, minRoomCount]);
 
   // Fetch rooms + rates from API (extracted so auth-change can re-trigger it)
   const fetchRooms = useCallback(async () => {
@@ -114,7 +115,8 @@ export default function RoomChoicesPage() {
                 const rateJson = await rateRes.json();
                 if (rateJson.ok && Array.isArray(rateJson.data) && rateJson.data.length > 0) {
                   const rate = rateJson.data[0];
-                  const price = rate.price?.adult || rate.pax_1 || 0;
+                  // adult + child covers all guests; multiply by room_count in display
+                  const price = (rate.price?.adult || 0) + (rate.price?.child || 0);
                   return { ...room, price };
                 }
               } catch {
@@ -154,7 +156,7 @@ export default function RoomChoicesPage() {
   };
 
   const decrement = (id: number) => {
-    if ((roomCounts[id] || 1) > 1) {
+    if ((roomCounts[id] || minRoomCount) > minRoomCount) {
       setRoomCounts({ ...roomCounts, [id]: roomCounts[id] - 1 });
     }
   };
@@ -253,13 +255,13 @@ export default function RoomChoicesPage() {
                 {/* Beds / Adults / Children */}
                 <div className="flex gap-4 text-ms space-x-7 justify-center text-gray-600 mt-3">
                   <span className="flex items-center gap-1">
-                    <FaHome /> {isArabic ? "غرفة" : "Room"} {room.beds}
+                    <FaHome /> {isArabic ? "غرفة" : "Room"} {Number(roomParam)}
                   </span>
                   <span className="flex items-center gap-1">
-                    <FaUser /> {isArabic ? "البالغون" : "Adults"} {room.adults}
+                    <FaUser /> {isArabic ? "البالغون" : "Adults"} {Number(adultParam)}
                   </span>
                   <span className="flex items-center gap-1">
-                    <FaChild /> {isArabic ? "الأطفال" : "Children"} {room.children}
+                    <FaChild /> {isArabic ? "الأطفال" : "Children"} {Number(childrenParam)}
                   </span>
                 </div>
 

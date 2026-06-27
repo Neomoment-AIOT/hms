@@ -1,6 +1,4 @@
 "use client";
-
-import Image from "next/image";
 import { LangContext } from "@/app/lang-provider";
 import { useContext, useState, useEffect } from "react";
 
@@ -9,6 +7,7 @@ type Hotel = {
   nameEn: string;
   nameAr: string;
   price: number;
+  rating: number;
   imageUrl: string;
 };
 
@@ -23,40 +22,53 @@ const Offers = () => {
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
 
-  const [offersList, setOffersList] = useState(hotels);
+  const [offersList, setOffersList] = useState<Hotel[]>(hotels);
   useEffect(() => {
-    try {
-      // Load disabled hotels map
-      const disabledRaw = localStorage.getItem("admin_disabled_hotels");
-      const disabledMap: Record<string, boolean> = disabledRaw ? JSON.parse(disabledRaw) : {};
+    let cancelled = false;
 
-      const stored = localStorage.getItem("admin_global_offers");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+    async function load() {
+      // 1) Preferred source: Odoo public CMS API (Featured Hotels)
+      try {
+        const res = await fetch("/api/cms/featured-hotels", { cache: "no-store" });
+        const json = (await res.json().catch(() => null)) as
+          | { ok: true; data: unknown }
+          | { ok: false; error?: string }
+          | null;
+
+        if (!cancelled && json?.ok && Array.isArray(json.data)) {
           setOffersList(
-            parsed
-              .filter((h: Record<string, unknown>) => {
-                // Filter by odooId if present, otherwise by id
-                const checkId = (h.odooId as number) || (h.id as number);
-                return !disabledMap[String(checkId)];
-              })
-              .map((h: Record<string, unknown>) => ({
-                id: h.id as number,
-                nameEn: ((h.nameEn as string) || (h.name as string) || "") as string,
-                nameAr: ((h.nameAr as string) || (h.arabicName as string) || "") as string,
-                price: (h.price || 0) as number,
-                imageUrl: ((h.imageUrl as string) || (h.image as string) || "/hotel/hotel1.jpg") as string,
-              }))
+            (json.data as Array<Record<string, unknown>>).map((h) => ({
+              id: Number((h.id as number) || (h.odooId as number) || 0),
+              nameEn: String((h.nameEn as string) || (h.name as string) || ""),
+              // When API doesn't provide Arabic, mirror English so UI doesn't look empty.
+              nameAr: String((h.nameAr as string) || (h.arabicName as string) || (h.name as string) || ""),
+              price: Number(
+                (h.starting_price as number) ||
+                  (h.startingPrice as number) ||
+                  (h.price as number) ||
+                  0
+              ),
+              rating: (h.star_rating as number) || 0,
+              // /api/hotels/list returns "logo" as a data URL; fall back to imageUrl/image.
+              imageUrl: String(
+                (h.logo as string) ||
+                  (h.imageUrl as string) ||
+                  (h.image as string) ||
+                  "/hotel/hotel1.jpg"
+              ),
+            }))
           );
           return;
         }
+      } catch {
+        // ignore and fall back
       }
-      // Fallback: filter hardcoded list by disabled map
-      if (Object.keys(disabledMap).length > 0) {
-        setOffersList(hotels.filter((h) => !disabledMap[String(h.id)]));
-      }
-    } catch {}
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -75,11 +87,12 @@ const Offers = () => {
                   key={hotel.id}
                   className={`relative rounded-lg overflow-hidden shadow-lg group hover:shadow-2xl transition-shadow h-80 md:h-96 ${isArabic ? "text-right" : "text-left"}`}
                 >
-                  <Image
+                  <img
                     src={hotel.imageUrl}
                     alt={isArabic ? hotel.nameAr : hotel.nameEn}
-                    fill
-                    className="object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
 
                   <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
@@ -95,7 +108,7 @@ const Offers = () => {
 
                     <div className="flex items-center mt-2 text-xs justify-between">
                       <span className={`${isArabic ? "font-arabic text-right" : ""}`}>
-                        {isArabic ? "بدون تقييمات ★" : "★ No ratings"}
+                        {hotel.rating > 0 ? `★ ${hotel.rating}` : (isArabic ? "بدون تقييمات" : "No ratings")}
                       </span>
 
                       <span
@@ -104,13 +117,13 @@ const Offers = () => {
                         {isArabic ? (
                           <>
                             <span>{toArabicNumbers(hotel.price)}</span>
-                            <Image src="/Riyal_White.png" alt="Riyal" width={14} height={14} />
+                            <img src="/Riyal_White.png" alt="Riyal" width={14} height={14} />
                             <span>/ ليلة</span>
                           </>
                         ) : (
                           <>
                             Night /
-                            <Image src="/Riyal_White.png" alt="Riyal" width={14} height={14} />
+                            <img src="/Riyal_White.png" alt="Riyal" width={14} height={14} />
                             {hotel.price}
                           </>
                         )}

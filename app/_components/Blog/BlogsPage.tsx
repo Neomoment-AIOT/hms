@@ -53,15 +53,56 @@ export default function BlogsPage() {
   const [blogsList, setBlogsList] = useState(defaultBlogs);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("admin_global_blogs");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setBlogsList(parsed);
+    let cancelled = false;
+
+    async function load() {
+      // 1) Preferred source: Odoo public CMS API
+      try {
+        const res = await fetch("/api/cms/blogs", { cache: "no-store" });
+        const json = (await res.json().catch(() => null)) as
+          | { ok: true; data: unknown }
+          | { ok: false; error?: string }
+          | null;
+
+        if (!cancelled && json?.ok && Array.isArray(json.data)) {
+          // Keep supporting the legacy fields used by the UI.
+          setBlogsList(
+            (json.data as Array<Record<string, unknown>>).map((b) => ({
+              slug: String(b.slug || ""),
+              titleEn: String(b.titleEn || ""),
+              titleAr: String(b.titleAr || ""),
+              descriptionEn: String(b.descriptionEn || ""),
+              descriptionAr: String(b.descriptionAr || ""),
+              date: String(b.date || ""),
+              time: String(b.time || ""),
+              comments: Number(b.comments || 0),
+              image: String(b.image || "/Blogs/Blog.jpeg"),
+            }))
+          );
+          return;
         }
+      } catch {
+        // ignore and fall back
       }
-    } catch {}
+
+      // 2) Fallback for older admin UI (localStorage) - keep for now
+      try {
+        const stored = localStorage.getItem("admin_global_blogs");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (!cancelled && Array.isArray(parsed) && parsed.length > 0) {
+            setBlogsList(parsed);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

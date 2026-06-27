@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { odooPost } from "@/app/lib/odoo/client";
+import { odooFetch } from "@/app/lib/odoo/client";
 import { getAuthFromCookies } from "@/app/lib/auth/cookies";
 import type { HotelSearchRequest, HotelSearchResponse } from "@/app/lib/odoo/types";
 
@@ -36,13 +36,17 @@ export async function POST(request: NextRequest) {
     const auth = getAuthFromCookies(request);
     const person_id = auth?.partnerId || 0;
 
-    const result = await odooPost<HotelSearchResponse>("/api/hotels", {
-      checkin_date: body.checkin_date,
-      checkout_date: body.checkout_date,
-      room_count: body.room_count,
-      adult_count: body.adult_count,
-      person_email: body.person_email || "",
-      person_id,
+    const result = await odooFetch<HotelSearchResponse>("/api/hotels", {
+      method: "POST",
+      body: {
+        checkin_date: body.checkin_date,
+        checkout_date: body.checkout_date,
+        room_count: body.room_count,
+        adult_count: body.adult_count,
+        person_email: body.person_email || "",
+        person_id,
+      },
+      timeout: 60_000,   // /api/hotels queries all companies + availability — needs more than 15s
     });
 
     if (!result.success) {

@@ -1,32 +1,35 @@
 import { NextResponse } from "next/server";
-import { odooGet } from "@/app/lib/odoo/client";
-import type { CountryStateListResponse } from "@/app/lib/odoo/types";
+import { odooPost } from "@/app/lib/odoo/client";
 
 /**
  * GET /api/geo/countries-states
- * Get list of countries and their states
- * Calls Odoo: GET /api/country/state/list
+ *
+ * Proxies to Odoo: POST /api/country/state/list
+ *
+ * The Odoo route now accepts methods=['GET', 'POST'] (type='json'),
+ * so we can use odooPost which sends a standard JSON-RPC POST body.
  */
 export async function GET() {
   try {
-    const result = await odooGet<CountryStateListResponse>(
-      "/api/country/state/list"
-    );
+    const result = await odooPost("/api/country/state/list", {});
 
     if (!result.success) {
+      console.error("[countries-states] Odoo call failed:", result.error);
       return NextResponse.json(
-        { ok: false, error: result.error },
-        { status: result.status }
+        { ok: false, error: "Odoo gateway error" },
+        { status: 502 }
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      data: result.data.countries || [],
-    });
-  } catch {
+    const data = result.data as Record<string, unknown>;
+    const countries = (data?.countries ?? []) as unknown[];
+
+    return NextResponse.json({ ok: true, data: countries });
+
+  } catch (err) {
+    console.error("[countries-states] Fetch failed:", err);
     return NextResponse.json(
-      { ok: false, error: "Failed to fetch countries and states" },
+      { ok: false, error: "Failed to fetch countries" },
       { status: 500 }
     );
   }

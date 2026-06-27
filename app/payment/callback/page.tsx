@@ -3,16 +3,18 @@
 /**
  * /payment/callback
  *
- * Noon redirects the user here after they complete (or cancel) payment.
- * URL params from Noon:
- *   orderId     – Noon's internal order ID
- *   resultCode  – 0 = success, non-zero = failure/cancel
+ * MyFatoorah redirects the user here after successful payment.
+ * MyFatoorah also redirects to ErrorUrl (/payment/failed) on failure,
+ * but we still verify on both to be safe.
+ *
+ * URL param from MyFatoorah:
+ *   paymentId  – transaction-level ID used for GetPaymentStatus lookup
  *
  * This page:
  *  1. Shows a "Verifying payment…" spinner
- *  2. Calls our BFF /api/payment/verify (server-side Noon lookup)
- *  3. If CAPTURED  → merges stored bookingData, saves to sessionStorage, redirects to /PayementSuccess
- *  4. Otherwise    → redirects to /payment/failed
+ *  2. Calls our BFF /api/payment/verify (server-side MyFatoorah lookup)
+ *  3. If Paid     → merges stored bookingData, saves to sessionStorage, redirects to /PayementSuccess
+ *  4. Otherwise   → redirects to /payment/failed
  */
 
 import { useEffect, useState, useContext, Suspense } from "react";
@@ -25,19 +27,17 @@ function CallbackContent() {
   const { lang }     = useContext(LangContext);
   const isArabic     = lang === "ar";
 
-  const [statusText, setStatusText] = useState(
+  const [statusText] = useState(
     isArabic ? "جاري التحقق من الدفع…" : "Verifying payment…"
   );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const noonOrderId = searchParams.get("orderId");
-    const resultCode  = searchParams.get("resultCode");
+    // MyFatoorah appends ?paymentId=xxx to both CallBackUrl and ErrorUrl
+    const paymentId = searchParams.get("paymentId");
 
-    // Noon sends resultCode "0" for success path; others are failure
-    // But we ALWAYS verify server-side regardless of this param
-    if (!noonOrderId) {
-      setError(isArabic ? "معرّف الطلب مفقود" : "Missing order ID from payment gateway");
+    if (!paymentId) {
+      setError(isArabic ? "معرّف الدفع مفقود" : "Missing payment ID from gateway");
       return;
     }
 
@@ -46,26 +46,31 @@ function CallbackContent() {
         const res  = await fetch("/api/payment/verify", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ noonOrderId }),
+          body:    JSON.stringify({ paymentId }),
         });
         const json = await res.json();
 
         if (json.ok && json.isPaid) {
-          // Merge noonOrderId into any stored bookingData
+          // Merge invoiceId into any stored bookingData
           const stored = sessionStorage.getItem("bookingData");
           if (stored) {
             try {
               const bd = JSON.parse(stored);
-              bd.noonOrderId   = noonOrderId;
-              bd.paymentStatus = "CAPTURED";
+              bd.invoiceId     = json.invoiceId;
+              bd.paymentId     = paymentId;
+              bd.paymentStatus = "Paid";
               sessionStorage.setItem("bookingData", JSON.stringify(bd));
             } catch { /* ignore parse errors */ }
           }
-          router.replace(`/PayementSuccess?noonOrderId=${noonOrderId}`);
+          // json.reference = CustomerReference = HMS-17-xxx = our orderRef
+          const orderRef = json.reference || "";
+          router.replace(
+            `/PayementSuccess?invoiceId=${json.invoiceId}&paymentId=${paymentId}&orderRef=${encodeURIComponent(orderRef)}`
+          );
         } else {
-          // Payment not captured — send to failed page with status
-          const status = json.status || "FAILED";
-          router.replace(`/payment/failed?status=${status}&orderId=${noonOrderId}`);
+          // Payment not confirmed — send to failed page
+          const status = json.status || "Canceled";
+          router.replace(`/payment/failed?status=${status}&invoiceId=${json.invoiceId || ""}`);
         }
       } catch {
         setError(

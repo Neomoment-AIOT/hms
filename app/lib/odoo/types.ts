@@ -266,6 +266,8 @@ export interface ConfirmBookingRequest {
   reference_booking?: string;
   additional_notes?: string;
   special_request?: string;
+  /** Odoo meal.pattern record ID — if omitted, the controller auto-derives from rate_code */
+  meal_pattern_id?: number;
 }
 
 export interface RetrieveBookingRequest {

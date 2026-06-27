@@ -28,7 +28,7 @@ export default function Hotels() {
   useEffect(() => {
     const fetchHotels = async () => {
       try {
-        const res = await fetch("/api/hotels");
+        const res = await fetch("/api/hotels", { cache: "no-store" });
         const json = await res.json();
 
         if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
@@ -45,9 +45,12 @@ export default function Hotels() {
               nameEn: (h.name as string) || "",
               nameAr: (h.name as string) || "", // Odoo returns single name; Arabic TBD
               price: (h.starting_price as number) || 0,
-              imageUrl: h.logo
-                ? `data:image/png;base64,${h.logo}`
-                : hotelFallbacks[idx % hotelFallbacks.length],
+              imageUrl: String(
+                (h.logo as string) ||
+                (h.imageUrl as string) ||
+                (h.image as string) ||
+                "/hotel/hotel1.jpg"
+              ),
               rating: (h.star_rating as number) || 0,
             }))
           );

@@ -25,7 +25,7 @@ export default function Banner() {
   const { lang } = useContext(LangContext);
   const router = useRouter();
 
-  // Admin-managed banner data (extended for media types)
+  // Banner data (managed in Odoo HMS CMS → Banner Settings)
   const [adminBanner, setAdminBanner] = useState<{
     imageUrl?: string;
     videoUrl?: string;
@@ -40,11 +40,25 @@ export default function Banner() {
   } | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("admin_global_banner");
-      if (stored) setAdminBanner(JSON.parse(stored));
-    } catch {}
+    let cancelled = false;
+    fetch("/api/cms/banner", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled) return;
+        if (j?.ok && j.data) setAdminBanner(j.data);
+      })
+      .catch(() => {
+        // keep defaults on error
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const bannerTitle = lang === "en" ? adminBanner?.titleEn || "" : adminBanner?.titleAr || "";
+  const bannerSubtitle =
+    lang === "en" ? adminBanner?.subtitleEn || "" : adminBanner?.subtitleAr || "";
 
   // Build BannerMediaConfig from admin data
   const mediaConfig = useMemo<BannerMediaConfig>(() => {
@@ -206,9 +220,8 @@ export default function Banner() {
 
   const changeDetail = (key: keyof GuestDetails, delta: number) => {
     setGuestDetails((prev) => {
-      const next = { ...prev };
-      next[key] = Math.max(0, prev[key] + delta);
-      return next;
+      const min = key === "children" ? 0 : 1;
+      return { ...prev, [key]: Math.max(min, prev[key] + delta) };
     });
   };
 
@@ -235,34 +248,26 @@ export default function Banner() {
 
       <div className="relative z-[2] text-white max-w-7xl mx-auto w-full px-4">
         {/* Title */}
-<h1
-  className={`text-2xl md:text-5xl font-semibold mb-2 w-full
-    ${
-      lang === "ar"
-        ? "font-arabic text-right"
-        : "text-center"
-    }
-  `}
->
-  {lang === "en"
-    ? (adminBanner?.titleEn || "Book Your Hotel With Ease Today.")
-    : (adminBanner?.titleAr || "احجز فندقك بسهولة اليوم.")}
-</h1>
+        {bannerTitle ? (
+          <h1
+            className={`text-2xl md:text-5xl font-semibold mb-2 w-full
+              ${lang === "ar" ? "font-arabic text-right" : "text-center"}
+            `}
+          >
+            {bannerTitle}
+          </h1>
+        ) : null}
 
 {/* Subtitle */}
-<p
-  className={`mb-3 text-sm md:text-base w-full
-    ${
-      lang === "ar"
-        ? "font-arabic text-right"
-        : "text-center"
-    }
-  `}
->
-  {lang === "en"
-    ? (adminBanner?.subtitleEn || "Let us help you find the perfect stay for your Hajj and Umrah journey.")
-    : (adminBanner?.subtitleAr || "دعنا نساعدك في العثور على الإقامة المثالية لرحلة حجك وعمرتك.")}
-</p>
+        {bannerSubtitle ? (
+          <p
+            className={`mb-3 text-sm md:text-base w-full
+              ${lang === "ar" ? "font-arabic text-right" : "text-center"}
+            `}
+          >
+            {bannerSubtitle}
+          </p>
+        ) : null}
 
 
         {/* Search Form */}

@@ -251,9 +251,8 @@ export default function HotelFilter() {
   /* ---------------- GUEST HANDLERS ---------------- */
   const changeDetail = (key: keyof GuestDetails, delta: number) => {
     setGuestDetails((prev) => {
-      const next = { ...prev };
-      next[key] = Math.max(0, prev[key] + delta);
-      return next;
+      const min = key === "children" ? 0 : 1;
+      return { ...prev, [key]: Math.max(min, prev[key] + delta) };
     });
   };
 
@@ -455,7 +454,7 @@ export default function HotelFilter() {
                   <div className={`flex justify-between mt-2 ${lang === "ar" ? "flex-row-reverse space-x-reverse space-x-2" : "space-x-2"}`}>
                     <button
                       type="button"
-                      onClick={() => setGuestDetails({ room: 0, adult: 0, children: 0 })}
+                      onClick={() => setGuestDetails({ room: 1, adult: 1, children: 0 })}
                       className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs font-medium"
                     >
                       {lang === "ar" ? "إعادة تعيين" : "Reset"}
