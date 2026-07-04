@@ -1,7 +1,29 @@
 "use client";
 
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { LangContext } from "@/app/lang-provider";
+import { getUser } from "@/app/utils/auth";
+
+type RoomLine = {
+  id: number;
+  room_type: string | null;
+  state: string;
+  room: string | null;
+};
+
+type Booking = {
+  booking_id: number;
+  booking_name: string;
+  reference_number: string;
+  hotel_name: string | null;
+  room_count: number;
+  state: string;
+  adult_count: number;
+  child_count: number;
+  checkin_date: string;
+  checkout_date: string;
+  room_line_ids: RoomLine[];
+};
 
 function StatusTag({ label, color, isArabic }: { label: string; color: string; isArabic: boolean }) {
   return (
@@ -17,59 +39,68 @@ function StatusTag({ label, color, isArabic }: { label: string; color: string; i
       >
         {label}
       </div>
-
-      <div
-        className={`w-2 h-2 rounded-full bg-white ${isArabic ? "-mr-3" : "-ml-3"}`}
-      />
+      <div className={`w-2 h-2 rounded-full bg-white ${isArabic ? "-mr-3" : "-ml-3"}`} />
     </div>
   );
 }
 
-const reservationsData = [
-  {
-    id: "BK001",
-    room: "Deluxe Room",
-    stayFrom: "15-01-2026",
-    stayTo: "20-01-2026",
-    rooms: 2,
-    meals: "Breakfast, Lunch",
-    guests: "1 Adult 1 Child",
-    price: 250,
-    status: "confirmed",
-  },
-  {
-    id: "BK002",
-    room: "Double Room",
-    stayFrom: "01-01-2026",
-    stayTo: "05-01-2026",
-    rooms: 2,
-    meals: "Breakfast",
-    guests: "1 Adult 1 Child",
-    price: 290,
-    status: "cancelled",
-  },
-  {
-    id: "BK003",
-    room: "Family Suite",
-    stayFrom: "01-01-2026",
-    stayTo: "07-01-2026",
-    rooms: 2,
-    meals: "Breakfast, Lunch, Dinner",
-    guests: "1 Adult 1 Child",
-    price: 300,
-    status: "unconfirmed",
-  },
-];
+function formatDate(dt: string): string {
+  if (!dt) return "—";
+  return dt.split(" ")[0] || dt;
+}
+
+function mapState(state: string): "confirmed" | "unconfirmed" | "cancelled" {
+  if (["confirm", "confirmed", "checked_in", "checked_out"].includes(state)) return "confirmed";
+  if (["cancel", "no_show"].includes(state)) return "cancelled";
+  return "unconfirmed";
+}
 
 export default function MyReservationsPage() {
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
   const [filter, setFilter] = useState("all");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered =
-    filter === "all"
-      ? reservationsData
-      : reservationsData.filter((r) => r.status === filter);
+  useEffect(() => {
+    const load = async () => {
+      const user = getUser();
+      if (!user?.email) { setBookings([]); setLoading(false); return; }
+
+      setLoading(true);
+      try {
+        const res = await fetch("/api/bookings/retrieve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ partner_email: user.email }),
+        });
+        const json = await res.json();
+        if (json.ok) {
+          const all: Booking[] = [
+            ...(json.data.bookings || []),
+            ...(json.data.group_bookings || []),
+          ];
+          setBookings(all);
+        } else {
+          setBookings([]);
+        }
+      } catch {
+        setBookings([]);
+      }
+      setLoading(false);
+    };
+
+    load();
+
+    // Re-fetch when auth changes (login / logout / return from payment)
+    window.addEventListener("auth-change", load);
+    return () => window.removeEventListener("auth-change", load);
+  }, []);
+
+  const filtered = bookings.filter((b) => {
+    if (filter === "all") return true;
+    return mapState(b.state) === filter;
+  });
 
   return (
     <div dir={isArabic ? "rtl" : "ltr"} className="p-6 md:p-8">
@@ -77,7 +108,7 @@ export default function MyReservationsPage() {
         {isArabic ? "حجوزاتي" : "My Reservations"}
       </h1>
 
-      {/* Tabs – mobile safe */}
+      {/* Tabs */}
       <div className="flex border-b border-gray-300 mb-6 overflow-x-auto">
         {[
           { key: "all", label: isArabic ? "الكل" : "All" },
@@ -89,9 +120,7 @@ export default function MyReservationsPage() {
             key={tab.key}
             onClick={() => setFilter(tab.key)}
             className={`px-4 py-2 whitespace-nowrap border-b-2 font-medium ${
-              filter === tab.key
-                ? "border-black text-black"
-                : "border-transparent text-gray-500"
+              filter === tab.key ? "border-black text-black" : "border-transparent text-gray-500"
             }`}
           >
             {tab.label}
@@ -99,106 +128,73 @@ export default function MyReservationsPage() {
         ))}
       </div>
 
+      {loading && (
+        <div className="text-center py-12 text-gray-500">
+          {isArabic ? "جاري التحميل..." : "Loading..."}
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          {isArabic ? "لا توجد حجوزات" : "No reservations found."}
+        </div>
+      )}
+
       {/* Cards */}
       <div className="space-y-6 w-full md:w-[800px] mx-auto">
-        {filtered.map((b) => (
-          <div
-            key={b.id}
-            className="border rounded-lg p-6 shadow-sm bg-white space-y-2 w-full"
-          >
-            <h2 className="text-lg font-semibold">
-              {isArabic
-                ? b.room === "Deluxe Room"
-                  ? "غرفة ديلوكس"
-                  : b.room === "Double Room"
-                  ? "غرفة مزدوجة"
-                  : "جناح عائلي"
-                : b.room}
-            </h2>
+        {filtered.map((b) => {
+          const status = mapState(b.state);
+          const roomType = b.room_line_ids?.[0]?.room_type || (isArabic ? "غرفة" : "Room");
 
-            {/* Booking ID */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">
-                {isArabic ? "معرّف الحجز" : "Booking ID"}:
-              </span>
-              {b.id}
-              <StatusTag
-                label={
-                  b.status === "confirmed"
-                    ? isArabic ? "مؤكد" : "Confirmed"
-                    : b.status === "cancelled"
-                    ? isArabic ? "ملغى" : "Cancelled"
-                    : isArabic ? "غير مؤكد" : "Unconfirmed"
-                }
-                color={
-                  b.status === "confirmed"
-                    ? "#16A34A"
-                    : b.status === "cancelled"
-                    ? "#DC2626"
-                    : "#C67115"
-                }
-                isArabic={isArabic}
-              />
-            </div>
+          return (
+            <div key={b.booking_id} className="border rounded-lg p-6 shadow-sm bg-white space-y-2 w-full">
+              <h2 className="text-lg font-semibold">{roomType}</h2>
 
-            <p>
-              <span className="font-medium">
-                {isArabic ? "تاريخ الإقامة" : "Stay Date"}:
-              </span>{" "}
-              {b.stayFrom} | {b.stayTo}
-            </p>
+              {/* Booking ID */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{isArabic ? "معرّف الحجز" : "Booking ID"}:</span>
+                {b.reference_number || b.booking_name}
+                <StatusTag
+                  label={
+                    status === "confirmed"
+                      ? isArabic ? "مؤكد" : "Confirmed"
+                      : status === "cancelled"
+                      ? isArabic ? "ملغى" : "Cancelled"
+                      : isArabic ? "غير مؤكد" : "Unconfirmed"
+                  }
+                  color={
+                    status === "confirmed" ? "#16A34A" : status === "cancelled" ? "#DC2626" : "#C67115"
+                  }
+                  isArabic={isArabic}
+                />
+              </div>
 
-            <p>
-              <span className="font-medium">
-                {isArabic ? "الغرف" : "Rooms"}:
-              </span>{" "}
-              {b.rooms}
-            </p>
+              {b.hotel_name && (
+                <p>
+                  <span className="font-medium">{isArabic ? "الفندق" : "Hotel"}:</span>{" "}
+                  {b.hotel_name}
+                </p>
+              )}
 
-            <p>
-              <span className="font-medium">
-                {isArabic ? "الوجبات" : "Meals"}:
-              </span>{" "}
-              {isArabic
-                ? b.meals
-                    .replace("Breakfast", "إفطار")
-                    .replace("Lunch", "غداء")
-                    .replace("Dinner", "عشاء")
-                : b.meals}
-            </p>
-
-            {/* Guests + Button */}
-            <div className="flex justify-between items-center flex-wrap gap-2">
               <p>
-                <span className="font-medium">
-                  {isArabic ? "الضيوف" : "Guests"}:
-                </span>{" "}
-                {isArabic
-                  ? b.guests.replace("Adult", "بالغ").replace("Child", "طفل")
-                  : b.guests}
+                <span className="font-medium">{isArabic ? "تاريخ الإقامة" : "Stay Date"}:</span>{" "}
+                {formatDate(b.checkin_date)} | {formatDate(b.checkout_date)}
               </p>
 
-              {b.status === "confirmed" && (
-                <button className="bg-red-600 text-white px-4 py-1 rounded-md text-sm font-semibold">
-                  {isArabic ? "إلغاء" : "Cancel"}
-                </button>
-              )}
+              <p>
+                <span className="font-medium">{isArabic ? "الغرف" : "Rooms"}:</span>{" "}
+                {b.room_count}
+              </p>
 
-              {b.status === "unconfirmed" && (
-                <button className="bg-green-600 text-white px-4 py-1 rounded-md text-sm font-semibold">
-                  {isArabic ? "تأكيد" : "Confirm"}
-                </button>
-              )}
+              <div className="flex justify-between items-center flex-wrap gap-2">
+                <p>
+                  <span className="font-medium">{isArabic ? "الضيوف" : "Guests"}:</span>{" "}
+                  {b.adult_count} {isArabic ? "بالغ" : "Adult"}{b.child_count > 0 ? `, ${b.child_count} ${isArabic ? "طفل" : "Child"}` : ""}
+                </p>
+              </div>
             </div>
-
-            <hr className="my-2" />
-
-            <p className="text-lg font-bold flex items-center gap-2">
-              <img src="/Riyal_Black.png" alt="SAR" className="w-5 h-5 inline-block" />
-              {b.price}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

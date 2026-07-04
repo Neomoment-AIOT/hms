@@ -26,8 +26,8 @@ export const GET = withAuth(async (_request: NextRequest, auth) => {
     return NextResponse.json({
       ok: true,
       data: {
-        bookings: result.data.bookings_data || [],
-        group_bookings: result.data.group_bookings_data || [],
+        bookings: result.data.bookings || result.data.bookings_data || [],
+        group_bookings: result.data.group_bookings || result.data.group_bookings_data || [],
       },
     });
   } catch {

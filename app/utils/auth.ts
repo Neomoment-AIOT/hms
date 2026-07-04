@@ -9,6 +9,15 @@ export type User = {
   email: string;
 };
 
+// Keys in sessionStorage that belong to a booking session.
+// Language preference ("lang") is intentionally excluded — it persists.
+const SESSION_BOOKING_KEYS = ["bookingData", "invoiceId", "retrieve_email"];
+
+function clearBookingSession() {
+  if (typeof window === "undefined") return;
+  SESSION_BOOKING_KEYS.forEach((k) => sessionStorage.removeItem(k));
+}
+
 // ─── Sign In ───────────────────────────────────────────────────
 
 export async function signIn(
@@ -37,6 +46,9 @@ export async function signIn(
     // Store minimal user info for client-side display
     // (auth itself is in HTTP-only cookies, not here)
     localStorage.setItem("user", JSON.stringify(user));
+
+    // Clear any stale booking/guest session from a previous session
+    clearBookingSession();
 
     // Notify all components that auth state changed (e.g. re-fetch rates with partner_id)
     if (typeof window !== "undefined") {
@@ -139,6 +151,9 @@ export async function signOut(): Promise<void> {
     // Ignore network errors on signout
   }
   localStorage.removeItem("user");
+
+  // Clear booking/guest session data so the next user starts fresh
+  clearBookingSession();
 
   // Notify all components that auth state changed (e.g. re-fetch rates without partner_id)
   if (typeof window !== "undefined") {

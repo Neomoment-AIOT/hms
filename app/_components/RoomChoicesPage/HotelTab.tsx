@@ -15,7 +15,12 @@ const tabItems = [
   { id: "FAQs", en: "FAQs", ar: "الأسئلة الشائعة" },
 ];
 
-export default function HotelTab() {
+type HotelTabProps = {
+  hotelName?: string;
+  roomImages?: string[];
+};
+
+export default function HotelTab({ hotelName, roomImages }: HotelTabProps) {
   const { lang } = useContext(LangContext);
   const isArabic = lang === "ar";
 
@@ -68,7 +73,7 @@ export default function HotelTab() {
 
       {/* Tab Content */}
       <div className="mt-4">
-        {activeTab === "Photos" && <PhotosPage />}
+        {activeTab === "Photos" && <PhotosPage hotelName={hotelName} roomImages={roomImages} />}
         {activeTab === "Reviews" && <Review />}
         {activeTab === "Amenities" && <Amenities />}
         {activeTab === "FAQs" && <FAQ />}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { odooPost } from "@/app/lib/odoo/client";
+import { odooFetch } from "@/app/lib/odoo/client";
 import { getAuthFromCookies } from "@/app/lib/auth/cookies";
 import type { RoomAvailabilityRequest, RoomAvailabilityResponse } from "@/app/lib/odoo/types";
 
@@ -23,16 +23,20 @@ export async function POST(request: NextRequest) {
     const auth = getAuthFromCookies(request);
     const person_id = auth?.partnerId || 0;
 
-    const result = await odooPost<RoomAvailabilityResponse>(
+    const result = await odooFetch<RoomAvailabilityResponse>(
       "/api/room_availability",
       {
-        hotel_id: body.hotel_id || 0,
-        check_in_date: body.check_in_date,
-        check_out_date: body.check_out_date,
-        person_count: body.person_count || 1,
-        room_count: body.room_count || 1,
-        person_email: body.person_email || "",
-        person_id,
+        method: "POST",
+        body: {
+          hotel_id: body.hotel_id || 0,
+          check_in_date: body.check_in_date,
+          check_out_date: body.check_out_date,
+          person_count: body.person_count || 1,
+          room_count: body.room_count || 1,
+          person_email: body.person_email || "",
+          person_id,
+        },
+        timeout: 60_000,
       }
     );
 

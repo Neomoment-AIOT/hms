@@ -58,7 +58,7 @@ export default function BlogPostPage() {
     if (!slug) return;
     setCommentsLoading(true);
     try {
-      const res = await fetch(`/api/cms/blogs/${encodeURIComponent(slug)}/comments`, {
+      const res = await fetch(`/api/cms/blogs/comments?slug=${encodeURIComponent(slug)}`, {
         cache: "no-store",
       });
       const json = (await res.json().catch(() => null)) as
@@ -158,10 +158,10 @@ export default function BlogPostPage() {
     (async () => {
       setCommentStatus(null);
       try {
-        const res = await fetch(`/api/cms/blogs/${encodeURIComponent(slug)}/comments`, {
+        const res = await fetch(`/api/cms/blogs/comments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, message }),
+          body: JSON.stringify({ slug, name, email, message }),
         });
         const json = (await res.json().catch(() => null)) as
           | { ok: true; message?: string }

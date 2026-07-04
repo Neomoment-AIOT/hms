@@ -43,6 +43,8 @@ export default function GuestDetailsPage() {
     checkOutParam ? new Date(checkOutParam + "T00:00:00") : addDays(new Date(), 1)
   );
   const [apiCountries, setApiCountries] = useState<string[]>([]);
+  const [additionalNotes, setAdditionalNotes] = useState("");
+  const [specialRequest, setSpecialRequest]   = useState("");
   const [submitting, setSubmitting]           = useState(false);
   const [loadingMethods, setLoadingMethods]   = useState(false);
   const [showMethodModal, setShowMethodModal] = useState(false);
@@ -78,8 +80,8 @@ export default function GuestDetailsPage() {
 
   // Hotel detail from API
   const [hotelDetail, setHotelDetail] = useState<{
-    name: string; phone: string; star_rating: number; location: string;
-    logo: string | null; room_types: { id: number; type: string; pax: number }[];
+    name: string; phone: string; star_rating: number; address: string;
+    logo: string | null; room_types: { id: number; type: string; pax: number; image?: string }[];
     meals?: { id: number; description: string; unit_price: number; child_price: number; meal_type: string; default: boolean }[];
     services?: { id: number; name: string; unit_price: number; rhythm: string }[];
     meal_pattern_id?: number;
@@ -176,7 +178,7 @@ export default function GuestDetailsPage() {
   const effectiveHotelName = hotelDetail?.name || "N/A (loading...)";
   const effectiveHotelRating = hotelDetail?.star_rating || 0;
   const effectiveHotelPhone = hotelDetail?.phone || "";
-  const effectiveHotelLocation = hotelDetail?.location || "";
+  const effectiveHotelLocation = hotelDetail?.address || "";
 
   const [firstName, setFirstName]         = useState("");
   const [lastName, setLastName]           = useState("");
@@ -394,8 +396,10 @@ export default function GuestDetailsPage() {
           guestMobile:    "",
           guestCountry:   selectedCountry || "",
           amount:         payableAmount,
-          meals:          selectedMeals.map((m) => ({ id: m.id, description: m.description, unit_price: m.unit_price })),
-          mealPatternId:  hotelDetail?.meal_pattern_id ,  // from API, fallback to Room Only (id=4)
+          meals:           selectedMeals.map((m) => ({ id: m.id, description: m.description, unit_price: m.unit_price })),
+          mealPatternId:   hotelDetail?.meal_pattern_id,
+          additionalNotes: additionalNotes,
+          specialRequest:  specialRequest,
         }),
       });
 
@@ -501,6 +505,8 @@ export default function GuestDetailsPage() {
           <div>
             <label className="text-sm font-medium">{isArabic ? "أضف المزيد من التفاصيل" : "Add more detail"}</label>
             <textarea
+              value={additionalNotes}
+              onChange={(e) => setAdditionalNotes(e.target.value)}
               placeholder={isArabic ? "أرسل رسالة" : "Send message"}
               className="mt-1 w-full border rounded px-3 py-2 h-32"
             />
@@ -535,6 +541,8 @@ export default function GuestDetailsPage() {
               {isArabic ? "لدي طلبات أخرى" : "I have other requests"}
             </label>
             <textarea
+              value={specialRequest}
+              onChange={(e) => setSpecialRequest(e.target.value)}
               placeholder={isArabic ? "أرسل رسالة" : "Send message"}
               className="w-full border rounded px-3 py-2 h-24"
             />
@@ -551,9 +559,12 @@ export default function GuestDetailsPage() {
           {/* HOTEL CARD */}
           <div className="flex gap-3 items-start mb-4">
             <img
-              src={hotelDetail?.logo || "/Hotel_Room/luxuryroom.jpeg"}
+              src={
+                hotelDetail?.room_types?.find((rt) => rt.id === roomTypeId)?.image ||
+                "/Hotel_Room/luxuryroom.jpeg"
+              }
               className="w-16 h-16 rounded object-cover"
-              alt="hotel"
+              alt="room"
             />
 
             <div className="flex-1">

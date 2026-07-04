@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { odooGet, odooPost } from "@/app/lib/odoo/client";
+import { odooPost } from "@/app/lib/odoo/client";
 import { withAuth } from "@/app/lib/auth/middleware";
 import type { PartnerResponse, PartnerUpdateRequest, OdooResponse } from "@/app/lib/odoo/types";
 
 /**
  * GET /api/account/profile
  * Get the authenticated user's profile from Odoo
- * Calls Odoo: GET /api/get/partner?partner_id=X
+ * Calls Odoo: POST /api/get/partner {partner_id}
  */
 export const GET = withAuth(async (_request: NextRequest, auth) => {
   try {
-    const result = await odooGet<PartnerResponse>(
+    const result = await odooPost<PartnerResponse>(
       "/api/get/partner",
-      { partner_id: String(auth.partnerId) },
+      { partner_id: auth.partnerId },
       auth.sessionToken
     );
 
@@ -49,6 +49,9 @@ export const PUT = withAuth(async (request: NextRequest, auth) => {
       {
         partner_id: auth.partnerId,
         name: body.name,
+        email: body.email,
+        phone: body.phone,
+        image: body.image,
         state_id: body.state_id,
         country_id: body.country_id,
         website: body.website,

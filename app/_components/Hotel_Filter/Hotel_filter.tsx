@@ -131,7 +131,7 @@ export default function HotelFilter() {
             id: h.id as number,
             name: (h.name as string) || "",
             arabicName: (h.name as string) || "",
-            image: h.logo ? `data:image/png;base64,${h.logo}` : hotelFallbacks[idx % hotelFallbacks.length],
+            image: (h.logo as string) || hotelFallbacks[idx % hotelFallbacks.length],
             price: (h.starting_price as number) || 0,
             rating: (h.star_rating as number) || 0,
             reviews: 0,

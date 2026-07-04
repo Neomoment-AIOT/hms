@@ -49,6 +49,7 @@ export default function SignIn({
     if (result.ok) {
       onSuccess?.({ name: result.user.name, email: result.user.email });
       onClose();
+      window.location.reload();
     } else {
       setError(result.error);
     }

@@ -107,7 +107,9 @@ export async function POST(request: NextRequest) {
     // })),
     services: [],
 
-    meal_pattern_id: session.mealPatternId,
+    meal_pattern_id:  session.mealPatternId,
+    additional_notes: session.additionalNotes || "",
+    special_request:  session.specialRequest  || "",
 
     reference_number: session.orderRef,
 

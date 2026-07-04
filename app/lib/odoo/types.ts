@@ -65,6 +65,9 @@ export interface ChangePasswordRequest {
 export interface PartnerUpdateRequest {
   partner_id: number;
   name?: string;
+  email?: string;
+  phone?: string;
+  image?: string;
   state_id?: number;
   country_id?: number;
   website?: string;
@@ -78,6 +81,9 @@ export interface PartnerData {
   partner_id: number;
   name: string;
   complete_name?: string;
+  email?: string;
+  phone?: string;
+  image?: string;
   state_id: number | null;
   country_id: number | null;
   website: string;

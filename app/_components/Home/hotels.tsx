@@ -45,12 +45,7 @@ export default function Hotels() {
               nameEn: (h.name as string) || "",
               nameAr: (h.name as string) || "", // Odoo returns single name; Arabic TBD
               price: (h.starting_price as number) || 0,
-              imageUrl: String(
-                (h.logo as string) ||
-                (h.imageUrl as string) ||
-                (h.image as string) ||
-                "/hotel/hotel1.jpg"
-              ),
+              imageUrl: (h.logo as string) || hotelFallbacks[idx % hotelFallbacks.length],
               rating: (h.star_rating as number) || 0,
             }))
           );
@@ -113,11 +108,10 @@ export default function Hotels() {
               className={`relative h-80 md:h-96 rounded-lg overflow-hidden shadow-lg cursor-pointer
               group hover:shadow-2xl transition-all ${isArabic ? "text-right" : "text-left"}`}
             >
-              <Image
+              <img
                 src={hotel.imageUrl}
                 alt={isArabic ? hotel.nameAr : hotel.nameEn}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
 
               <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />

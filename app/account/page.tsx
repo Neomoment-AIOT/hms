@@ -31,6 +31,7 @@ export default function AccountPage() {
   const [currentLocation, setCurrentLocation] = useState("");
   const [bio, setBio] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [countries, setCountries] = useState<CountryOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -50,10 +51,12 @@ export default function AccountPage() {
           setFirstName(fullName[0] || "");
           setLastName(fullName.slice(1).join(" ") || "");
           setEmail(d.email || "");
+          setMobile(d.phone || "");
           setCity(d.city || "");
           setZip(d.zip || "");
           setCurrentLocation(d.street || "");
           setCountryId(d.country_id || null);
+          if (d.image) setPreviewImage(d.image);
 
           setUser({ name: d.name || "", email: d.email || "" });
           setProfileLoading(false);
@@ -122,10 +125,13 @@ export default function AccountPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
-          city,
-          zip,
-          street: currentLocation,
+          email: email || undefined,
+          phone: mobile || undefined,
+          city: city || undefined,
+          zip: zip || undefined,
+          street: currentLocation || undefined,
           country_id: country ? parseInt(country) : undefined,
+          image: imageBase64 || undefined,
         }),
       });
 
@@ -133,21 +139,29 @@ export default function AccountPage() {
 
       if (json.ok) {
         const updatedUser = { name: `${firstName} ${lastName}`.trim(), email };
-        setUser(updatedUser);
         localStorage.setItem("user", JSON.stringify(updatedUser));
         alert(isArabic ? "تم حفظ البيانات!" : "Saved successfully!");
+        window.location.reload();
       } else {
         alert(json.error || (isArabic ? "فشل الحفظ" : "Save failed"));
+        setSaving(false);
       }
     } catch {
       alert(isArabic ? "فشل الحفظ" : "Save failed");
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setPreviewImage(URL.createObjectURL(file));
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setPreviewImage(result);
+      setImageBase64(result);
+    };
+    reader.readAsDataURL(file);
   };
 
   if (profileLoading) {

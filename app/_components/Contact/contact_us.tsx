@@ -54,7 +54,7 @@ export default function ContactUs() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send message");
+      if (!res.ok || !data.ok) throw new Error(data.error || "Failed to send message");
 
       setStatus({ loading: false, success: true, error: "" });
 

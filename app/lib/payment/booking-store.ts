@@ -32,6 +32,8 @@ export type BookingSession = {
   amount:          number;          // SAR
   meals:           { id: number; description: string; unit_price: number }[];
   mealPatternId:   number | null;
+  additionalNotes: string;
+  specialRequest:  string;
   savedAt:         number;          // Date.now()
 };
 

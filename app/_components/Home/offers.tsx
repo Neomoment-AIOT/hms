@@ -49,13 +49,7 @@ const Offers = () => {
                   0
               ),
               rating: (h.star_rating as number) || 0,
-              // /api/hotels/list returns "logo" as a data URL; fall back to imageUrl/image.
-              imageUrl: String(
-                (h.logo as string) ||
-                  (h.imageUrl as string) ||
-                  (h.image as string) ||
-                  "/hotel/hotel1.jpg"
-              ),
+              imageUrl: (h.logo as string) || (h.imageUrl as string) || "/hotel/hotel1.jpg",
             }))
           );
           return;

@@ -6,6 +6,7 @@ import { FaStar, FaMapMarkerAlt, FaDownload, FaCheckCircle, FaExclamationTriangl
 import { LangContext } from "@/app/lang-provider";
 import { generateBookingPDF } from "@/app/utils/generateBookingPDF";
 import { getPDFLabels } from "@/app/utils/pdfLabels";
+import { fetchUserProfile } from "@/app/utils/auth";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -27,12 +28,14 @@ type OdooBooking = {
   checkin_date:  string;
   checkout_date: string;
   hotel_name:    string;
+  hotel_address: string;
   guest_name:    string;
   email:         string;
   mobile:        string;
   adults:        number;
   children:      number;
   room_type:     string;
+  room_image:    string | null;
   meal_pattern:  string;
   amount_total:  number;
 };
@@ -54,6 +57,15 @@ export default function PaymentSuccessPage() {
   const [paidAmount, setPaidAmount]     = useState<number>(0);
 
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ── Restore auth state after external payment redirect ── */
+  useEffect(() => {
+    fetchUserProfile().then((user) => {
+      if (user && typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-change"));
+      }
+    });
+  }, []);
 
   /* ── Load paid amount from sessionStorage (set before redirect) ── */
   useEffect(() => {
@@ -109,9 +121,9 @@ export default function PaymentSuccessPage() {
       checkIn:      booking.checkin_date,
       checkOut:     booking.checkout_date,
       hotelName:    booking.hotel_name  || "Hotel",
-      hotelAddress: isArabic
+      hotelAddress: booking.hotel_address || (isArabic
         ? "بلعقيق، طريق الملك فهد، الرياض 13515، المملكة العربية السعودية"
-        : "BeAl Aqiq, King Fahd Branch Rd, Riyadh 13515, Saudi Arabia",
+        : "BeAl Aqiq, King Fahd Branch Rd, Riyadh 13515, Saudi Arabia"),
       hotelPhone:   "+966 920010417",
       rating:       "3 / 5",
       selectedMeals: booking.meal_pattern
@@ -237,9 +249,9 @@ export default function PaymentSuccessPage() {
           {/* Room + hotel row */}
           <div className={`flex flex-col md:flex-row gap-6 items-center md:items-start ${isArabic ? "md:flex-row-reverse" : ""}`}>
             <img
-              src="/Hotel_Room/luxuryroom.jpeg"
+              src={booking.room_image || "/Hotel_Room/luxuryroom.jpeg"}
               className="w-full md:w-24 h-48 md:h-24 rounded-xl object-cover"
-              alt="hotel"
+              alt="room"
             />
             <div className={`flex-1 text-center ${isArabic ? "md:text-right" : "md:text-left"}`}>
               <h4 className="font-semibold text-xl">{booking.room_type || "Hotel Room"}</h4>
@@ -257,13 +269,12 @@ export default function PaymentSuccessPage() {
           </div>
 
           {/* Address */}
-          <div className={`flex items-start gap-3 text-base text-gray-600 ${isArabic ? "md:flex-row-reverse text-right" : ""}`}>
-            <FaMapMarkerAlt className="text-xl shrink-0 mt-1" />
-            <p>{isArabic
-              ? "بلعقيق، طريق الملك فهد، الرياض 13515، المملكة العربية السعودية."
-              : "BeAl Aqiq, RRAA8604, 8604 King Fahd Branch Rd, Riyadh 13515, Saudi Arabia."
-            }</p>
-          </div>
+          {booking.hotel_address && (
+            <div className={`flex items-start gap-3 text-base text-gray-600 ${isArabic ? "md:flex-row-reverse text-right" : ""}`}>
+              <FaMapMarkerAlt className="text-xl shrink-0 mt-1" />
+              <p>{booking.hotel_address}</p>
+            </div>
+          )}
 
           {/* Booking details grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm md:text-base">

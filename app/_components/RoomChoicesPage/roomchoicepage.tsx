@@ -82,23 +82,23 @@ export default function RoomChoicesPage() {
 
         if (roomTypes.length > 0) {
           const mappedRooms: RoomData[] = roomTypes.map(
-            (rt: { id: number; type: string; pax: number; room_count: number }, index: number) => ({
+            (rt: { id: number; type: string; pax: number; room_count: number; image?: string }, index: number) => ({
               id: rt.id,
               name: rt.type,
-              nameAr: rt.type, // Odoo returns single name
-              price: 0, // Will be fetched via rates API
+              nameAr: rt.type,
+              price: 0,
               beds: rt.room_count,
               adults: rt.pax,
               children: 0,
-              image: roomImages[index % roomImages.length],
+              image: rt.image || roomImages[index % roomImages.length],
             })
           );
 
           // Fetch rates for each room type
+          const rateUser = getUser();
           const roomsWithPrices = await Promise.all(
             mappedRooms.map(async (room) => {
               try {
-                const rateUser = getUser();
                 const rateRes = await fetch("/api/rooms/rates", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -115,7 +115,6 @@ export default function RoomChoicesPage() {
                 const rateJson = await rateRes.json();
                 if (rateJson.ok && Array.isArray(rateJson.data) && rateJson.data.length > 0) {
                   const rate = rateJson.data[0];
-                  // adult + child covers all guests; multiply by room_count in display
                   const price = (rate.price?.adult || 0) + (rate.price?.child || 0);
                   return { ...room, price };
                 }
